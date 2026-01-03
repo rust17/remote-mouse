@@ -9,3 +9,8 @@ dependencies = [
     "pystray>=0.19.5",
     "Pillow>=10.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.17.0",
+]

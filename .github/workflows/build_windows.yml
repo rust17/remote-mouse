@@ -1,0 +1,37 @@
+name: Build Windows Server
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - 'server/**'
+      - '.github/workflows/build_windows.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: '3.13'
+        enable-cache: true
+        cache-dependency-glob: "server/uv.lock"
+
+    - name: Build with PyInstaller
+      run: |
+        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouseServer" main.py
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: RemoteMouseServer-exe
+        path: server/dist/RemoteMouseServer.exe
