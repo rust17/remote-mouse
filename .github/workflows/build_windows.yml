@@ -28,7 +28,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouseServer" main.py
+        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouseServer" src/server/main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
