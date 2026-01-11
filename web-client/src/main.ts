@@ -11,10 +11,13 @@ class RemoteMouseClient {
     // 手势识别相关变量
     private pointers = new Map<number, {x: number, y: number}>();
     private isDragging = false;
+    private hasMoved = false;
     private lastTapTime = 0;
+    private lastRightClickTime = 0;
 
     // 移动优化变量
     private moveSensitivity = 2;
+    private dragSensitivity = this.moveSensitivity / 2; // 降低拖拽灵敏度，提高选择精度
     private accumulatorX = 0;
     private accumulatorY = 0;
     private pendingDx = 0;
@@ -114,6 +117,9 @@ class RemoteMouseClient {
 
     private initInputs() {
         this.touchpadEl.addEventListener('pointerdown', (e) => {
+            if (this.pointers.size === 0) {
+                this.hasMoved = false;
+            }
             this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
             // 每次按下新手指，重置累加器
@@ -132,6 +138,10 @@ class RemoteMouseClient {
             const prev = this.pointers.get(e.pointerId)!;
             const rawDx = e.clientX - prev.x;
             const rawDy = e.clientY - prev.y;
+
+            if (Math.abs(rawDx) > 1 || Math.abs(rawDy) > 1) {
+                this.hasMoved = true;
+            }
 
             this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -156,8 +166,8 @@ class RemoteMouseClient {
                 }
             } else if (this.pointers.size === 3) {
                 // 三指移动
-                this.accumulatorX += rawDx * this.moveSensitivity;
-                this.accumulatorY += rawDy * this.moveSensitivity;
+                this.accumulatorX += rawDx * this.dragSensitivity;
+                this.accumulatorY += rawDy * this.dragSensitivity;
 
                 const stepX = Math.trunc(this.accumulatorX);
                 const stepY = Math.trunc(this.accumulatorY);
@@ -179,7 +189,10 @@ class RemoteMouseClient {
                 }
             } else if (this.pointers.size === 2) {
                 // 双指点击 -> 右键
-                this.sendClick(0x02);
+                if (!this.hasMoved) {
+                    this.sendClick(0x02);
+                    this.lastRightClickTime = Date.now();
+                }
             }
 
             if (this.isDragging && this.pointers.size < 3) {
@@ -195,7 +208,10 @@ class RemoteMouseClient {
 
         // 处理单击逻辑
         this.touchpadEl.addEventListener('click', () => {
-            this.sendClick(0x01);
+            const now = Date.now();
+            if (!this.hasMoved && (now - this.lastRightClickTime > 300)) {
+                this.sendClick(0x01);
+            }
         });
     }
 }
