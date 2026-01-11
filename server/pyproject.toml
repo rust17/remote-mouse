@@ -13,6 +13,7 @@ dependencies = [
     "zeroconf>=0.148.0",
     "ifaddr>=0.2.0",
     "loguru>=0.7.3",
+    "pyperclip>=1.8.2",
 ]
 
 [dependency-groups]
