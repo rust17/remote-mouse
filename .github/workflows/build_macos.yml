@@ -1,4 +1,4 @@
-name: Build Windows Server
+name: Build macOS Server
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
     paths:
       - 'server/**'
       - 'web-client/**'
-      - '.github/workflows/build_windows.yml'
+      - '.github/workflows/build_macos.yml'
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -40,13 +40,12 @@ jobs:
 
     - name: Build with PyInstaller
       working-directory: ./server
-      # --add-data format for Windows: "source_path;dest_folder_name"
-      # Embedding web-client/dist into web_dist folder inside the executable
+      # --add-data format for macOS/Linux: "source_path:dest_folder_name" (separator is :)
       run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist;web_dist" src/server/main.py
+        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist:web_dist" src/server/main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: RemoteMouse-exe
-        path: server/dist/RemoteMouse.exe
+        name: RemoteMouse-macos
+        path: server/dist/RemoteMouse
