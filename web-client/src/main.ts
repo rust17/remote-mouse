@@ -34,6 +34,13 @@ class RemoteMouseClient {
     private isKeyboardOpen = false;
     private isComposing = false;
 
+    // Settings
+    private settingsBtn: HTMLElement;
+    private settingsModal: HTMLElement;
+    private closeSettingsBtn: HTMLElement;
+    private sensitivitySlider: HTMLInputElement;
+    private sensitivityValueLabel: HTMLElement;
+
     // 功能键/修饰键相关
     private activeModifiers = 0; // Bitmask: 1=Ctrl, 2=Shift, 4=Alt, 8=Win
     private fnPanelEl: HTMLElement;
@@ -46,19 +53,64 @@ class RemoteMouseClient {
         this.keyboardInput = document.getElementById('keyboard-input')! as HTMLTextAreaElement;
         this.fnPanelEl = document.getElementById('fn-panel')!;
 
+        // Settings Elements
+        this.settingsBtn = document.getElementById('btn-settings')!;
+        this.settingsModal = document.getElementById('settings-modal')!;
+        this.closeSettingsBtn = document.getElementById('btn-close-settings')!;
+        this.sensitivitySlider = document.getElementById('sensitivity-slider')! as HTMLInputElement;
+        this.sensitivityValueLabel = document.getElementById('sensitivity-value')!;
+
         this.initWebSocket();
         this.initInputs();
         this.initKeyboard();
         this.initFnKeys();
+        this.initSettings();
         this.startLoop(); // 启动 RAF 发送循环
+    }
+
+    private initSettings() {
+        // Load saved sensitivity
+        const savedSensitivity = localStorage.getItem('remote-mouse-sensitivity');
+        if (savedSensitivity) {
+            this.moveSensitivity = parseFloat(savedSensitivity);
+            this.sensitivitySlider.value = savedSensitivity;
+            this.sensitivityValueLabel.textContent = savedSensitivity;
+        }
+
+        // Toggle Modal
+        this.settingsBtn.addEventListener('click', () => {
+            this.settingsModal.classList.remove('hidden');
+        });
+
+        this.closeSettingsBtn.addEventListener('click', () => {
+            this.settingsModal.classList.add('hidden');
+        });
+
+        // Close on backdrop click
+        this.settingsModal.addEventListener('click', (e) => {
+            if (e.target === this.settingsModal) {
+                this.settingsModal.classList.add('hidden');
+            }
+        });
+
+        // Slider Logic
+        this.sensitivitySlider.addEventListener('input', () => {
+            const val = this.sensitivitySlider.value;
+            this.moveSensitivity = parseFloat(val);
+            this.sensitivityValueLabel.textContent = val;
+        });
+
+        this.sensitivitySlider.addEventListener('change', () => {
+            localStorage.setItem('remote-mouse-sensitivity', this.sensitivitySlider.value);
+        });
     }
 
     private updateStatus(status: string, state: 'connected' | 'disconnected' | 'connecting') {
         this.statusTextEl.textContent = status;
-        
+
         // Remove all status classes
         this.statusIndicatorEl.classList.remove('status-connected', 'status-disconnected', 'status-connecting');
-        
+
         // Add new status class
         this.statusIndicatorEl.classList.add(`status-${state}`);
     }
