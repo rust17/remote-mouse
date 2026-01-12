@@ -3,172 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Remote Mouse V3</title>
-    <style>
-      * {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-        box-sizing: border-box;
-      }
-      body, html {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background-color: #1a1a1a;
-        color: white;
-        font-family: system-ui, -apple-system, sans-serif;
-        touch-action: none;
-      }
-      #app {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
-      #status {
-        padding: 10px;
-        text-align: center;
-        background: #333;
-        font-size: 14px;
-        flex-shrink: 0;
-      }
-      #touchpad {
-        flex: 1;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
-        touch-action: none;
-      }
-      #touchpad::after {
-        content: "TOUCHPAD";
-        color: #444;
-        font-weight: bold;
-        font-size: 2rem;
-        letter-spacing: 0.5rem;
-      }
-      #toolbar {
-        height: 60px;
-        background: #222;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-top: 1px solid #333;
-        flex-shrink: 0;
-      }
-      .tool-btn {
-        background: #333;
-        border: none;
-        border-radius: 50%;
-        width: 44px;
-        height: 44px;
-        font-size: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        cursor: pointer;
-        transition: background 0.2s;
-        margin: 0 10px;
-      }
-      .tool-btn:active {
-        background: #444;
-      }
-      .tool-btn.active {
-        background: #4caf50;
-      }
-      /* Invisible input for keyboard */
-      #keyboard-input {
-        position: absolute;
-        top: -1000px;
-        left: -1000px;
-        opacity: 0;
-        width: 1px;
-        height: 1px;
-        pointer-events: none;
-      }
-      .connected { color: #4caf50; }
-      .disconnected { color: #f44336; }
-      .connecting { color: #ffeb3b; }
-
-      #fn-panel {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 5px;
-        padding: 5px;
-        background: #222;
-        border-top: 1px solid #333;
-        flex-shrink: 0;
-      }
-      .fn-btn {
-        background: #333;
-        border: 1px solid #444;
-        border-radius: 6px;
-        color: #ddd;
-        font-size: 13px;
-        font-weight: 500;
-        padding: 12px 0;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.1s;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .fn-btn:active {
-        background: #444;
-        transform: scale(0.95);
-      }
-      .fn-btn.active {
-        background: #4caf50;
-        color: white;
-        border-color: #4caf50;
-      }
-      .fn-btn.modifier.active {
-        background: #2196f3;
-        color: white;
-        box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
-        border-color: #2196f3;
-      }
-    </style>
+    <link rel="stylesheet" href="/src/style.css">
   </head>
   <body>
     <div id="app">
-      <div id="status">正在连接...</div>
-      <div id="touchpad"></div>
+      <!-- Top Status Bar -->
+      <div id="status-bar">
+        <div id="status-indicator">
+          <div class="status-dot"></div>
+          <span class="status-text">Connecting...</span>
+        </div>
+      </div>
+
+      <!-- Touchpad Area -->
+      <div id="touchpad">
+      </div>
 
       <!-- Function Keys Panel -->
       <div id="fn-panel">
-        <!-- Row 1 -->
+        <!-- Row 1: System & Modifiers -->
         <button class="fn-btn" data-key="esc">Esc</button>
-        <button class="fn-btn" data-key="tab">Tab</button>
-        <button class="fn-btn modifier" data-modifier="win">Win</button>
+        <button class="fn-btn" data-key="tab">⇥</button>
+        <button class="fn-btn modifier" data-modifier="win">
+            <svg width="14" height="14" viewBox="0 0 88 88" fill="currentColor"><path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48l-.023-33.59zm7.062-39.24l44.93-6.6.155 41.838-45.028.243zm45.105 39.52l.142 41.742-45.093-6.66-.183-39.317z"/></svg>
+        </button>
         <button class="fn-btn modifier" data-modifier="alt">Alt</button>
-        <button class="fn-btn modifier" data-modifier="shift">Shift</button>
+        <button class="fn-btn modifier" data-modifier="shift">⇧</button>
         <button class="fn-btn modifier" data-modifier="ctrl">Ctrl</button>
 
-        <!-- Row 2 -->
-        <button class="fn-btn" data-key="backspace">Back</button>
-        <button class="fn-btn" data-key="enter">Enter</button>
-        <button class="fn-btn" data-key="left">←</button>
-        <button class="fn-btn" data-key="down">↓</button>
-        <button class="fn-btn" data-key="up">↑</button>
-        <button class="fn-btn" data-key="right">→</button>
+        <!-- Row 2: Actions & Navigation -->
+        <button class="fn-btn action-key" data-key="backspace">⌫</button>
+        <button class="fn-btn action-key" data-key="enter">↵</button>
+        <button class="fn-btn nav-key" data-key="left">←</button>
+        <button class="fn-btn nav-key" data-key="down">↓</button>
+        <button class="fn-btn nav-key" data-key="up">↑</button>
+        <button class="fn-btn nav-key" data-key="right">→</button>
       </div>
 
-      <div id="toolbar">
-        <button id="btn-keyboard" class="tool-btn">⌨️</button>
+      <!-- Floating Toolbar -->
+      <div id="toolbar-fab">
+        <button id="btn-keyboard" class="fab-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="6" y1="16" x2="6" y2="16"></line><line x1="10" y1="16" x2="10" y2="16"></line><line x1="14" y1="16" x2="14" y2="16"></line></svg>
+        </button>
       </div>
+      
       <textarea id="keyboard-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
     </div>
     <script type="module" src="/src/main.ts"></script>

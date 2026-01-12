@@ -1,96 +1,238 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --bg-color: #0f1115;
+  --panel-bg: #16191f;
+  --touchpad-bg-center: #1a1d24;
+  --touchpad-bg-edge: #0f1115;
+  
+  --accent-color: #3b82f6; /* Electric Blue */
+  --accent-glow: rgba(59, 130, 246, 0.4);
+  
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  
+  --btn-bg: #232730;
+  --btn-active: #334155;
+  --btn-border: #2d3340;
+  
+  --status-green: #22c55e;
+  --status-red: #ef4444;
+  --status-yellow: #eab308;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-body {
+body, html {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  touch-action: none;
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vanilla:hover {
-  filter: drop-shadow(0 0 2em #3178c6aa);
-}
-
-.card {
-  padding: 2em;
+/* --- Status Bar --- */
+#status-bar {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.read-the-docs {
-  color: #888;
+#status-indicator {
+  background: rgba(30, 35, 45, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--status-yellow);
+  box-shadow: 0 0 8px var(--status-yellow);
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+/* Status States */
+.status-connected .status-dot {
+  background-color: var(--status-green);
+  box-shadow: 0 0 8px var(--status-green);
+  animation: breathe 3s infinite ease-in-out;
+}
+.status-connected .status-text {
+  display: none; /* Hide text when connected for minimalism */
+}
+/* Re-center dot when text is hidden */
+.status-connected #status-indicator {
+    padding: 8px; 
+    border-radius: 50%;
+}
+
+.status-disconnected .status-dot {
+  background-color: var(--status-red);
+  box-shadow: 0 0 8px var(--status-red);
+}
+
+.status-text {
+  font-size: 12px;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+@keyframes breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.9); }
+}
+
+/* --- Touchpad --- */
+#touchpad {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  background: radial-gradient(circle at center, var(--touchpad-bg-center) 0%, var(--touchpad-bg-edge) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  /* Subtle texture using a repeating gradient pattern */
+  background-image: 
+    radial-gradient(circle at center, transparent 0%, var(--touchpad-bg-edge) 120%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 10px);
+}
+
+/* Interactive Feedback */
+#touchpad:active {
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Function Panel --- */
+#fn-panel {
+  padding: 12px 16px 20px; /* Extra bottom padding for safe area */
+  background: var(--panel-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 5;
+}
+
+.fn-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.fn-btn svg {
+  opacity: 0.8;
+}
+
+/* Active State (Press) */
+.fn-btn:active {
+  transform: translateY(2px);
+  background: var(--btn-active);
+  color: var(--text-primary);
+}
+
+/* Modifier Toggle Active State */
+.fn-btn.modifier.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Key Groups Styling */
+.action-key {
+  background-color: #2a2e38; /* Slightly lighter */
+  color: var(--text-primary);
+}
+
+.nav-key {
+  font-size: 16px;
+}
+
+/* --- FAB Toolbar --- */
+#toolbar-fab {
+  position: absolute;
+  bottom: 140px; /* Above fn-panel */
+  right: 20px;
+  z-index: 20;
+}
+
+.fab-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--accent-color);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.5);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab-btn:active {
+  transform: scale(0.95);
+  box-shadow: 2px 8px rgba(59, 130, 246, 0.4);
+}
+.fab-btn.active {
+    background: #fff;
+    color: var(--accent-color);
+}
+
+/* --- Hidden Input --- */
+#keyboard-input {
+  position: absolute;
+  top: -1000px;
+  left: -1000px;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }

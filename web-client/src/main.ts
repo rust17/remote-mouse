@@ -7,7 +7,8 @@ const OP_KEY_ACTION = 0x06;
 
 class RemoteMouseClient {
     private ws: WebSocket | null = null;
-    private statusEl: HTMLElement;
+    private statusIndicatorEl: HTMLElement;
+    private statusTextEl: HTMLElement;
     private touchpadEl: HTMLElement;
     private keyboardBtn: HTMLElement;
     private keyboardInput: HTMLTextAreaElement;
@@ -38,7 +39,8 @@ class RemoteMouseClient {
     private fnPanelEl: HTMLElement;
 
     constructor() {
-        this.statusEl = document.getElementById('status')!;
+        this.statusIndicatorEl = document.getElementById('status-indicator')!;
+        this.statusTextEl = this.statusIndicatorEl.querySelector('.status-text')!;
         this.touchpadEl = document.getElementById('touchpad')!;
         this.keyboardBtn = document.getElementById('btn-keyboard')!;
         this.keyboardInput = document.getElementById('keyboard-input')! as HTMLTextAreaElement;
@@ -51,9 +53,14 @@ class RemoteMouseClient {
         this.startLoop(); // 启动 RAF 发送循环
     }
 
-    private updateStatus(status: string, className: string) {
-        this.statusEl.textContent = status;
-        this.statusEl.className = className;
+    private updateStatus(status: string, state: 'connected' | 'disconnected' | 'connecting') {
+        this.statusTextEl.textContent = status;
+        
+        // Remove all status classes
+        this.statusIndicatorEl.classList.remove('status-connected', 'status-disconnected', 'status-connecting');
+        
+        // Add new status class
+        this.statusIndicatorEl.classList.add(`status-${state}`);
     }
 
     private initWebSocket() {
