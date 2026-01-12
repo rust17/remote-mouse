@@ -43,7 +43,7 @@ jobs:
       # --add-data format for Windows: "source_path;dest_folder_name"
       # Embedding web-client/dist into web_dist folder inside the executable
       run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --add-data "../web-client/dist;web_dist" src/server/main.py
+        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist;web_dist" src/server/main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
