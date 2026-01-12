@@ -20,6 +20,40 @@ OP_TEXT = 0x05
 OP_KEY_ACTION = 0x06
 
 
+def apply_modifiers(mask: int):
+    """
+    根据 mask 按下或释放修饰键。
+    返回一个 list，包含所有被按下的键名，以便后续释放。
+    Bit 0: Ctrl
+    Bit 1: Shift
+    Bit 2: Alt
+    Bit 3: Win/Cmd
+    """
+    modifiers = []
+    if mask & 1:
+        modifiers.append("ctrl")
+    if mask & 2:
+        modifiers.append("shift")
+    if mask & 4:
+        modifiers.append("alt")
+    if mask & 8:
+        if sys.platform == "darwin":
+            modifiers.append("command")
+        else:
+            modifiers.append("win")
+
+    for key in modifiers:
+        pyautogui.keyDown(key)
+
+    return modifiers
+
+
+def release_modifiers(modifiers: list):
+    """释放之前按下的修饰键"""
+    for key in reversed(modifiers):
+        pyautogui.keyUp(key)
+
+
 def process_binary_command(data: bytes):
     if not data:
         return
@@ -34,11 +68,22 @@ def process_binary_command(data: bytes):
             pyautogui.moveRel(dx, dy)
 
         elif opcode == OP_CLICK:
+            # [OpCode] [Button] [ModifierMask]
             if len(data) < 2:
                 return
+
             button_code = data[1]
             button = "left" if button_code == 0x01 else "right"
+
+            modifiers = []
+            if len(data) >= 3:
+                mask = data[2]
+                modifiers = apply_modifiers(mask)
+
             pyautogui.click(button=button)
+
+            if modifiers:
+                release_modifiers(modifiers)
 
         elif opcode == OP_SCROLL:
             if len(data) < 5:
@@ -96,8 +141,26 @@ def process_binary_command(data: bytes):
                 pyautogui.write(text)
 
         elif opcode == OP_KEY_ACTION:
-            key_name = data[1:].decode("utf-8")
+            # [OpCode] [ModifierMask] [KeyName: UTF8]
+            if len(data) < 2:
+                return
+
+            mask = data[1]
+            key_name = data[2:].decode("utf-8")
+
+            modifiers = apply_modifiers(mask)
+
+            # 特殊键名映射 (客户端发来的可能是 'enter', 'backspace' 等，pyautogui 需要对应)
+            # 大部分一致，除了 'win'/'cmd' 等
+            if key_name.lower() in ["win", "cmd", "meta"]:
+                if sys.platform == "darwin":
+                    key_name = "command"
+                else:
+                    key_name = "win"
+
             pyautogui.press(key_name)
+
+            release_modifiers(modifiers)
 
     except Exception as e:
         logger.error(f"Error processing opcode {opcode}: {e}")

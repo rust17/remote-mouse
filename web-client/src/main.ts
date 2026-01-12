@@ -16,7 +16,6 @@ class RemoteMouseClient {
     private pointers = new Map<number, {x: number, y: number}>();
     private isDragging = false;
     private hasMoved = false;
-    private lastTapTime = 0;
     private lastRightClickTime = 0;
 
     // 移动优化变量
@@ -34,15 +33,21 @@ class RemoteMouseClient {
     private isKeyboardOpen = false;
     private isComposing = false;
 
+    // 功能键/修饰键相关
+    private activeModifiers = 0; // Bitmask: 1=Ctrl, 2=Shift, 4=Alt, 8=Win
+    private fnPanelEl: HTMLElement;
+
     constructor() {
         this.statusEl = document.getElementById('status')!;
         this.touchpadEl = document.getElementById('touchpad')!;
         this.keyboardBtn = document.getElementById('btn-keyboard')!;
         this.keyboardInput = document.getElementById('keyboard-input')! as HTMLTextAreaElement;
+        this.fnPanelEl = document.getElementById('fn-panel')!;
 
         this.initWebSocket();
         this.initInputs();
         this.initKeyboard();
+        this.initFnKeys();
         this.startLoop(); // 启动 RAF 发送循环
     }
 
@@ -88,12 +93,19 @@ class RemoteMouseClient {
         this.sendCommand(this.moveBuffer);
     }
 
-    private sendClick(button: number) {
-        const buffer = new ArrayBuffer(2);
+    private sendClick(button: number, modifierMask?: number) {
+        // [OpCode] [Button] [ModifierMask]
+        const mask = modifierMask !== undefined ? modifierMask : this.activeModifiers;
+        const buffer = new ArrayBuffer(3);
         const view = new DataView(buffer);
         view.setUint8(0, OP_CLICK);
         view.setUint8(1, button);
+        view.setUint8(2, mask);
         this.sendCommand(buffer);
+
+        if (mask !== 0) {
+            this.resetModifiers();
+        }
     }
 
     private sendScroll(sx: number, sy: number) {
@@ -123,13 +135,26 @@ class RemoteMouseClient {
         this.sendCommand(buffer.buffer);
     }
 
-    private sendKeyAction(keyName: string) {
+    private sendKeyAction(keyName: string, modifierMask?: number) {
+        // [OpCode] [ModifierMask] [KeyName]
+        const mask = modifierMask !== undefined ? modifierMask : this.activeModifiers;
         const encoder = new TextEncoder();
         const keyBytes = encoder.encode(keyName);
-        const buffer = new Uint8Array(1 + keyBytes.length);
+        const buffer = new Uint8Array(2 + keyBytes.length);
         buffer[0] = OP_KEY_ACTION;
-        buffer.set(keyBytes, 1);
+        buffer[1] = mask;
+        buffer.set(keyBytes, 2);
         this.sendCommand(buffer.buffer);
+
+        if (mask !== 0) {
+            this.resetModifiers();
+        }
+    }
+
+    private resetModifiers() {
+        this.activeModifiers = 0;
+        const modifiers = this.fnPanelEl.querySelectorAll('.modifier');
+        modifiers.forEach(el => el.classList.remove('active'));
     }
 
     private startLoop() {
@@ -145,6 +170,10 @@ class RemoteMouseClient {
     }
 
     private initInputs() {
+        this.touchpadEl.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
         this.touchpadEl.addEventListener('pointerdown', (e) => {
             // 点击触控板时，如果键盘打开，则收起键盘
             if (this.isKeyboardOpen) {
@@ -162,7 +191,7 @@ class RemoteMouseClient {
 
             if (this.pointers.size === 3) {
                 this.isDragging = true;
-                this.sendDrag(0x01);
+                this.sendDrag(OP_MOVE);
             }
         });
 
@@ -211,13 +240,13 @@ class RemoteMouseClient {
             if (this.pointers.size === 1) {
                 // 处理点击 (Tap)
                 const now = Date.now();
-                if (now - this.lastTapTime < 300) {
-                   // double tap
+                if (!this.hasMoved && !this.isDragging && (now - this.lastRightClickTime > 300) && !this.isKeyboardOpen) {
+                    this.sendClick(OP_MOVE);
                 }
             } else if (this.pointers.size === 2) {
                 // 双指点击 -> 右键
                 if (!this.hasMoved) {
-                    this.sendClick(0x02);
+                    this.sendClick(OP_CLICK); // 传入 0x02 表示右键，mask 会在 sendClick 内部获取
                     this.lastRightClickTime = Date.now();
                 }
             }
@@ -233,13 +262,6 @@ class RemoteMouseClient {
 
         this.touchpadEl.addEventListener('pointerup', handlePointerUp);
         this.touchpadEl.addEventListener('pointercancel', handlePointerUp);
-
-        this.touchpadEl.addEventListener('click', () => {
-            const now = Date.now();
-            if (!this.hasMoved && (now - this.lastRightClickTime > 300) && !this.isKeyboardOpen) {
-                this.sendClick(0x01);
-            }
-        });
     }
 
     private toggleKeyboard(show: boolean) {
@@ -251,6 +273,39 @@ class RemoteMouseClient {
             this.keyboardInput.blur();
             this.keyboardBtn.classList.remove('active');
         }
+    }
+
+    private initFnKeys() {
+        this.fnPanelEl.addEventListener('click', (e) => {
+            const target = (e.target as HTMLElement).closest('.fn-btn');
+            if (!target) return;
+
+            const modifier = target.getAttribute('data-modifier');
+            const key = target.getAttribute('data-key');
+
+            if (modifier) {
+                // Handle sticky modifiers
+                let bit = 0;
+                if (modifier === 'ctrl') bit = 1;
+                else if (modifier === 'shift') bit = 2;
+                else if (modifier === 'alt') bit = 4;
+                else if (modifier === 'win') bit = 8;
+
+                if (bit > 0) {
+                    // Toggle bit
+                    if (this.activeModifiers & bit) {
+                        this.activeModifiers &= ~bit;
+                        target.classList.remove('active');
+                    } else {
+                        this.activeModifiers |= bit;
+                        target.classList.add('active');
+                    }
+                }
+            } else if (key) {
+                // Handle normal key action
+                this.sendKeyAction(key);
+            }
+        });
     }
 
     private initKeyboard() {
@@ -278,19 +333,24 @@ class RemoteMouseClient {
 
             if (this.isComposing) return;
 
-            // 处理普通文本输入
             if (event.data) {
-                this.sendText(event.data);
+                // 如果有激活的修饰键，或者输入的字符是单个字母/数字，
+                // 且 activeModifiers > 0，则当作 KeyAction 发送
+                // 例如 Ctrl+C
+                if (this.activeModifiers > 0 && event.data.length === 1) {
+                    this.sendKeyAction(event.data.toLowerCase());
+                } else {
+                    this.sendText(event.data);
+                }
             }
 
-            // 清空输入框，防止内容累积
-            // 注意：某些输入法下立即清空可能会打断输入流，但对于 remote input 场景，通常期望逐字发送
+            // 清空输入框
             setTimeout(() => {
                 this.keyboardInput.value = '';
             }, 0);
         });
 
-        // 某些浏览器可能需要 keydown 来捕获特定键 (特别是 Backspace 和 Enter)
+        // 某些浏览器可能需要 keydown 来捕获特定键
         this.keyboardInput.addEventListener('keydown', (e) => {
              if (this.isComposing) return;
 

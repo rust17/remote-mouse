@@ -99,12 +99,73 @@
       .connected { color: #4caf50; }
       .disconnected { color: #f44336; }
       .connecting { color: #ffeb3b; }
+
+      #fn-panel {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 5px;
+        padding: 5px;
+        background: #222;
+        border-top: 1px solid #333;
+        flex-shrink: 0;
+      }
+      .fn-btn {
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #ddd;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 12px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.1s;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .fn-btn:active {
+        background: #444;
+        transform: scale(0.95);
+      }
+      .fn-btn.active {
+        background: #4caf50;
+        color: white;
+        border-color: #4caf50;
+      }
+      .fn-btn.modifier.active {
+        background: #2196f3;
+        color: white;
+        box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+        border-color: #2196f3;
+      }
     </style>
   </head>
   <body>
     <div id="app">
       <div id="status">正在连接...</div>
       <div id="touchpad"></div>
+
+      <!-- Function Keys Panel -->
+      <div id="fn-panel">
+        <!-- Row 1 -->
+        <button class="fn-btn" data-key="esc">Esc</button>
+        <button class="fn-btn" data-key="tab">Tab</button>
+        <button class="fn-btn modifier" data-modifier="win">Win</button>
+        <button class="fn-btn modifier" data-modifier="alt">Alt</button>
+        <button class="fn-btn modifier" data-modifier="shift">Shift</button>
+        <button class="fn-btn modifier" data-modifier="ctrl">Ctrl</button>
+
+        <!-- Row 2 -->
+        <button class="fn-btn" data-key="backspace">Back</button>
+        <button class="fn-btn" data-key="enter">Enter</button>
+        <button class="fn-btn" data-key="left">←</button>
+        <button class="fn-btn" data-key="down">↓</button>
+        <button class="fn-btn" data-key="up">↑</button>
+        <button class="fn-btn" data-key="right">→</button>
+      </div>
+
       <div id="toolbar">
         <button id="btn-keyboard" class="tool-btn">⌨️</button>
       </div>
