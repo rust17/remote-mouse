@@ -28,7 +28,7 @@ def main():
         logger.info("Cleaning up...")
         mdns.unregister()
 
-    tray = TrayIcon(port=DEFAULT_PORT, on_exit_callback=on_exit)
+    tray = TrayIcon(port=DEFAULT_PORT, ip_address=mdns.get_local_ip(), on_exit_callback=on_exit)
 
     try:
         # 2. Start mDNS

@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release_name:
+        description: 'Release Title'
+        required: true
+        default: 'New Release'
+      release_body:
+        description: 'Release Description'
+        required: false
+        default: 'Automated release.'
+
+jobs:
+  release-latest:
+    name: Release Latest Artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download macOS Artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build_macos.yml
+          name: RemoteMouse-macos
+          path: assets
+          workflow_conclusion: success
+          # Optional: if you want to restrict to main branch, uncomment below
+          # branch: main
+
+      - name: Download Windows Artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build_windows.yml
+          name: RemoteMouse-exe
+          path: assets
+          workflow_conclusion: success
+          # Optional: if you want to restrict to main branch, uncomment below
+          # branch: main
+
+      - name: Display downloaded files
+        run: ls -R assets
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          name: ${{ github.event.inputs.release_name }}
+          body: ${{ github.event.inputs.release_body }}
+          files: assets/**/*
+          draft: false
+          prerelease: false

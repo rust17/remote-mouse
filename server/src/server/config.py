@@ -37,6 +37,16 @@ def get_static_dir() -> Path:
     return static_dir
 
 
+def get_asset_path(filename: str) -> Path:
+    if getattr(sys, "frozen", False):
+        bundle_dir = Path(sys._MEIPASS)
+        asset_path = bundle_dir / "assets" / filename
+    else:
+        current_dir = Path(__file__).resolve().parent
+        asset_path = current_dir / "assets" / filename
+    return asset_path
+
+
 def configure_logging(debug: bool = False):
     if debug:
         logger.remove()  # Remove default stderr handler

@@ -42,7 +42,7 @@ jobs:
       working-directory: ./server
       # --add-data format for macOS/Linux: "source_path:dest_folder_name" (separator is :)
       run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist:web_dist" src/server/main.py
+        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist:web_dist" --add-data "src/server/assets:assets" src/server/main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
