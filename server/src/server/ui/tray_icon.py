@@ -4,7 +4,13 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 from loguru import logger
 
-from server.config import APP_NAME, TRAY_ICON_SIZE, TRAY_ICON_BG_COLOR, TRAY_ICON_FG_COLOR, get_asset_path
+from server.config import (
+    APP_NAME,
+    TRAY_ICON_SIZE,
+    TRAY_ICON_BG_COLOR,
+    TRAY_ICON_FG_COLOR,
+    get_asset_path,
+)
 
 
 def create_image():

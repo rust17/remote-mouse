@@ -1,6 +1,10 @@
-# Remote Mouse
+# <img src="remote-mouse-icon.jpg" width="32" style="border-radius: 20%;" /> Remote Mouse
 
-[English](README.md) | [简体中文](README_ZH.md)
+[English](../README.md) | [简体中文](README_ZH.md)
+
+<p align="center">
+  <img src="remote-mouse.png" alt="Remote Mouse" width="300" />
+</p>
 
 ---
 
@@ -17,7 +21,7 @@ Remote Mouse 是一款轻量级、低延迟的远程控制工具，可将您的�
 
 ### 下载与运行 (普通用户)
 
-请前往 [Releases](https://github.com/your-username/remote-mouse/releases) 页面下载最新版本。
+请前往 [Releases](https://github.com/rust17/remote-mouse/releases) 页面下载最新版本。
 
 #### Windows
 1. 下载 `RemoteMouse.exe`。

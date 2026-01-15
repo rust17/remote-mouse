@@ -58,7 +58,10 @@ class RemoteMouseApp {
             document.getElementById('btn-close-settings')!,
             document.getElementById('sensitivity-slider')! as HTMLInputElement,
             document.getElementById('sensitivity-value')!,
-            (val) => this.touchpad.setSensitivity(val)
+            document.getElementById('scroll-sensitivity-slider')! as HTMLInputElement,
+            document.getElementById('scroll-sensitivity-value')!,
+            (val) => this.touchpad.setSensitivity(val),
+            (val) => this.touchpad.setScrollSensitivity(val)
         );
 
         // Connect

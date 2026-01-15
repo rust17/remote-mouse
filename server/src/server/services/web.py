@@ -2,7 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from server.core.protocol import process_binary_command, reset_input_state
+from server.core.protocol import process_binary_command
 from server.config import get_static_dir
 
 
@@ -23,10 +23,8 @@ def create_app() -> FastAPI:
                 process_binary_command(data)
         except WebSocketDisconnect:
             logger.info("WebSocket client disconnected")
-            reset_input_state()
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
-            reset_input_state()
 
     # 挂载静态文件（必须放在最后，否则可能覆盖 API 路由）
     if static_dir.exists():

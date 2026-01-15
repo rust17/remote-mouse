@@ -18,9 +18,12 @@ export class TouchpadHandler {
     // Movement optimization
     private accumulatorX = 0;
     private accumulatorY = 0;
+    private scrollAccumulatorX = 0;
+    private scrollAccumulatorY = 0;
 
     // Config
     public sensitivity = 2;
+    public scrollSensitivity = 1;
 
     constructor(element: HTMLElement, callbacks: TouchpadCallbacks) {
         this.element = element;
@@ -30,6 +33,10 @@ export class TouchpadHandler {
 
     public setSensitivity(val: number) {
         this.sensitivity = val;
+    }
+
+    public setScrollSensitivity(val: number) {
+        this.scrollSensitivity = val;
     }
 
     private initListeners() {
@@ -59,6 +66,26 @@ export class TouchpadHandler {
         this.element.addEventListener('pointermove', this.handlePointerMove.bind(this));
         this.element.addEventListener('pointerup', this.handlePointerUp.bind(this));
         this.element.addEventListener('pointercancel', this.handlePointerUp.bind(this));
+
+        // Reset state when page becomes hidden (e.g. lock screen, switch app)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.resetState();
+            }
+        });
+    }
+
+    private resetState() {
+        this.pointers.clear();
+        this.isDragging = false;
+        this.hasMoved = false;
+        this.accumulatorX = 0;
+        this.accumulatorY = 0;
+        this.scrollAccumulatorX = 0;
+        this.scrollAccumulatorY = 0;
+        if (this.isDragging) {
+             this.callbacks.onDrag(false);
+        }
     }
 
     private handlePointerDown(e: PointerEvent) {
@@ -71,6 +98,8 @@ export class TouchpadHandler {
         this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         this.accumulatorX = 0;
         this.accumulatorY = 0;
+        this.scrollAccumulatorX = 0;
+        this.scrollAccumulatorY = 0;
 
         try {
             this.element.setPointerCapture(e.pointerId);
@@ -113,7 +142,17 @@ export class TouchpadHandler {
         } else if (this.pointers.size === 2) {
             // Two finger scroll - only trigger for the first pointer to avoid double events
             if (e.pointerId === Array.from(this.pointers.keys())[0]) {
-                this.callbacks.onScroll(Math.round(rawDx), Math.round(rawDy));
+                this.scrollAccumulatorX += rawDx * this.scrollSensitivity;
+                this.scrollAccumulatorY += rawDy * this.scrollSensitivity;
+
+                const stepX = Math.trunc(this.scrollAccumulatorX);
+                const stepY = Math.trunc(this.scrollAccumulatorY);
+
+                if (stepX !== 0 || stepY !== 0) {
+                    this.scrollAccumulatorX -= stepX;
+                    this.scrollAccumulatorY -= stepY;
+                    this.callbacks.onScroll(stepX, stepY);
+                }
             }
         } else if (this.pointers.size === 3) {
             // Three finger drag move
@@ -136,31 +175,20 @@ export class TouchpadHandler {
 
         const now = Date.now();
 
-        if (this.pointers.size === 1) {
-            // Tap (Left Click)
-            // Logic: Not moved, Not in drag mode, Time since last right click > 300ms
-            if (!this.hasMoved && !this.isDragging && (now - this.lastRightClickTime > 300)) {
-                // Button 0 = Left (mapped to OP_MOVE logic in original code, but semantically it's a click)
-                // Original code sent: sendClick(OP_MOVE) ?? Wait.
-                // Original code: sendClick(OP_MOVE) -> OP_MOVE is 0x01.
-                // But sendClick(button) sends [OP_CLICK, button, mask].
-                // Usually Left=0, Right=2, Middle=1.
-                // The original code used `OP_MOVE` (0x01) as the button param for left click? That's weird.
-                // Standard MouseEvent.button: 0=Left.
-                // Let's preserve original behavior for now: Button 1 (0x01) for tap?
-                // Checking original code: `const OP_MOVE = 0x01; ... sendClick(OP_MOVE);`
-                // So it sends button=1.
-                // Wait, typically Left Click is button 1 in some contexts, 0 in others.
-                // I will pass '1' to match original code `OP_MOVE` constant usage,
-                // but strictly speaking, `OP_MOVE` as a button ID is confusing.
-                // I'll use the literal 1 to be safe and match behavior.
-                this.callbacks.onClick(1);
-            }
-        } else if (this.pointers.size === 2) {
-            // Two finger tap (Right Click)
-            if (!this.hasMoved) {
-                this.callbacks.onClick(2); // OP_CLICK (0x02) used as button ID in original code
-                this.lastRightClickTime = now;
+        // Fix: Do not trigger clicks on pointercancel (e.g. lock screen, system interruption)
+        if (e.type !== 'pointercancel') {
+            if (this.pointers.size === 1) {
+                // Tap (Left Click)
+                // Logic: Not moved, Not in drag mode, Time since last right click > 300ms
+                if (!this.hasMoved && !this.isDragging && (now - this.lastRightClickTime > 300)) {
+                    this.callbacks.onClick(1);
+                }
+            } else if (this.pointers.size === 2) {
+                // Two finger tap (Right Click)
+                if (!this.hasMoved) {
+                    this.callbacks.onClick(2); // OP_CLICK (0x02) used as button ID in original code
+                    this.lastRightClickTime = now;
+                }
             }
         }
 

@@ -367,6 +367,11 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 24px;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
 }
 
 .setting-label {

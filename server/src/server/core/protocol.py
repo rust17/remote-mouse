@@ -4,6 +4,7 @@ import logging
 import pyperclip
 import sys
 import time
+from contextlib import ExitStack
 
 from loguru import logger
 
@@ -20,10 +21,9 @@ OP_TEXT = 0x05
 OP_KEY_ACTION = 0x06
 
 
-def apply_modifiers(mask: int):
+def get_modifiers_list(mask: int):
     """
-    根据 mask 按下或释放修饰键。
-    返回一个 list，包含所有被按下的键名，以便后续释放。
+    根据 mask 获取需要按下的修饰键列表。
     Bit 0: Ctrl
     Bit 1: Shift
     Bit 2: Alt
@@ -41,17 +41,7 @@ def apply_modifiers(mask: int):
             modifiers.append("command")
         else:
             modifiers.append("win")
-
-    for key in modifiers:
-        pyautogui.keyDown(key)
-
     return modifiers
-
-
-def release_modifiers(modifiers: list):
-    """释放之前按下的修饰键"""
-    for key in reversed(modifiers):
-        pyautogui.keyUp(key)
 
 
 def process_binary_command(data: bytes):
@@ -75,15 +65,16 @@ def process_binary_command(data: bytes):
             button_code = data[1]
             button = "left" if button_code == 0x01 else "right"
 
-            modifiers = []
+            mask = 0
             if len(data) >= 3:
                 mask = data[2]
-                modifiers = apply_modifiers(mask)
 
-            pyautogui.click(button=button)
+            modifiers = get_modifiers_list(mask)
 
-            if modifiers:
-                release_modifiers(modifiers)
+            with ExitStack() as stack:
+                for key in modifiers:
+                    stack.enter_context(pyautogui.hold(key))
+                pyautogui.click(button=button)
 
         elif opcode == OP_SCROLL:
             if len(data) < 5:
@@ -148,7 +139,7 @@ def process_binary_command(data: bytes):
             mask = data[1]
             key_name = data[2:].decode("utf-8")
 
-            modifiers = apply_modifiers(mask)
+            modifiers = get_modifiers_list(mask)
 
             # 特殊键名映射 (客户端发来的可能是 'enter', 'backspace' 等，pyautogui 需要对应)
             # 大部分一致，除了 'win'/'cmd' 等
@@ -158,17 +149,10 @@ def process_binary_command(data: bytes):
                 else:
                     key_name = "win"
 
-            pyautogui.press(key_name)
-
-            release_modifiers(modifiers)
+            with ExitStack() as stack:
+                for key in modifiers:
+                    stack.enter_context(pyautogui.hold(key))
+                pyautogui.press(key_name)
 
     except Exception as e:
         logger.error(f"Error processing opcode {opcode}: {e}")
-
-
-def reset_input_state():
-    """重置输入状态，例如释放所有按下的键"""
-    try:
-        pyautogui.mouseUp(button="left")
-    except Exception as e:
-        logger.error(f"Error resetting input state: {e}")

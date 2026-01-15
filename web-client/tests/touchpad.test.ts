@@ -87,6 +87,22 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onMove).not.toHaveBeenCalled();
     });
 
+    it('should respect scroll sensitivity and accumulation', () => {
+        handler.setScrollSensitivity(0.5);
+
+        // Finger 1 & 2 down
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 2, 120, 100));
+
+        // Move 1px (dy=1 * 0.5 = 0.5) -> No scroll event yet
+        element.dispatchEvent(createEvent('pointermove', 1, 100, 101));
+        expect(callbacks.onScroll).not.toHaveBeenCalled();
+
+        // Move another 1px (total dy=2 * 0.5 = 1.0) -> Scroll event (0, 1)
+        element.dispatchEvent(createEvent('pointermove', 1, 100, 102));
+        expect(callbacks.onScroll).toHaveBeenCalledWith(0, 1);
+    });
+
     it('should trigger Drag start/end on three fingers', () => {
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         element.dispatchEvent(createEvent('pointerdown', 2, 110, 100));
