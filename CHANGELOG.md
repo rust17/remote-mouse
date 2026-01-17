@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - **UI**: Added scroll slider to the settings zone.
 - **Build**: Added support for macOS bundler (`.app` creation) and linux.
 - **Docs**: Added `README` documentation and `PWA`.
+- **UI**: Update function keys layout and improve navigation controls.
 
 ### Changed
 - **Refactor**: General refactoring of both server and frontend codebases for better maintainability.

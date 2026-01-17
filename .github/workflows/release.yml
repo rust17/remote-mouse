@@ -34,7 +34,7 @@ jobs:
         with:
           workflow: build_macos.yml
           name: RemoteMouse-macos
-          path: assets
+          path: assets/macos
           workflow_conclusion: success
 
       - name: Download Windows Artifact
@@ -42,7 +42,7 @@ jobs:
         with:
           workflow: build_windows.yml
           name: RemoteMouse-exe
-          path: assets
+          path: assets/windows
           workflow_conclusion: success
 
       - name: Download Linux Artifact
@@ -50,8 +50,15 @@ jobs:
         with:
           workflow: build_linux.yml
           name: RemoteMouse-linux
-          path: assets
+          path: assets/linux
           workflow_conclusion: success
+
+      - name: Rename Artifacts
+        run: |
+          mv assets/macos/RemoteMouse assets/RemoteMouse-macos
+          mv assets/linux/RemoteMouse assets/RemoteMouse-linux
+          mv assets/windows/RemoteMouse.exe assets/RemoteMouse-windows.exe
+          rm -rf assets/macos assets/linux assets/windows
 
       - name: Display downloaded files
         run: ls -R assets
