@@ -1,4 +1,4 @@
-name: Build macOS Server
+name: Build Linux Server
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
     paths:
       - 'server/**'
       - 'web-client/**'
-      - '.github/workflows/build_macos.yml'
+      - '.github/workflows/build_linux.yml'
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -30,7 +30,13 @@ jobs:
         npm ci
         npm run build
 
-    # --- 2. Build Python Server ---
+    # --- 2. Install Linux Dependencies ---
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-dev libappindicator3-dev libgirepository1.0-dev pkg-config
+
+    # --- 3. Build Python Server ---
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
@@ -40,12 +46,12 @@ jobs:
 
     - name: Build with PyInstaller
       working-directory: ./server
-      # --add-data format for macOS/Linux: "source_path:dest_folder_name" (separator is :)
+      # --add-data format for Linux: "source_path:dest_folder_name" (same as macOS)
       run: |
         uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist:web_dist" --add-data "src/server/assets:assets" src/server/main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: RemoteMouse-macos
+        name: RemoteMouse-linux
         path: server/dist/RemoteMouse

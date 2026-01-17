@@ -2,7 +2,7 @@ name: Build Windows Server
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "master" ]
     paths:
       - 'server/**'
       - 'web-client/**'
