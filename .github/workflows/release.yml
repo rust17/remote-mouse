@@ -35,8 +35,6 @@ jobs:
           name: RemoteMouse-macos
           path: assets
           workflow_conclusion: success
-          # Optional: if you want to restrict to main branch, uncomment below
-          # branch: main
 
       - name: Download Windows Artifact
         uses: dawidd6/action-download-artifact@v6
@@ -45,8 +43,14 @@ jobs:
           name: RemoteMouse-exe
           path: assets
           workflow_conclusion: success
-          # Optional: if you want to restrict to main branch, uncomment below
-          # branch: main
+
+      - name: Download Linux Artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build_linux.yml
+          name: RemoteMouse-linux
+          path: assets
+          workflow_conclusion: success
 
       - name: Display downloaded files
         run: ls -R assets
