@@ -6,6 +6,7 @@ export class SettingsManager {
     private sensitivityLabel: HTMLElement;
     private scrollSensitivitySlider: HTMLInputElement;
     private scrollSensitivityLabel: HTMLElement;
+    private themeToggle: HTMLInputElement;
 
     private onSensitivityChange: (val: number) => void;
     private onScrollSensitivityChange: (val: number) => void;
@@ -18,6 +19,7 @@ export class SettingsManager {
         label: HTMLElement,
         scrollSlider: HTMLInputElement,
         scrollLabel: HTMLElement,
+        themeToggle: HTMLInputElement,
         onSensitivityChange: (val: number) => void,
         onScrollSensitivityChange: (val: number) => void
     ) {
@@ -28,6 +30,7 @@ export class SettingsManager {
         this.sensitivityLabel = label;
         this.scrollSensitivitySlider = scrollSlider;
         this.scrollSensitivityLabel = scrollLabel;
+        this.themeToggle = themeToggle;
         this.onSensitivityChange = onSensitivityChange;
         this.onScrollSensitivityChange = onScrollSensitivityChange;
 
@@ -51,6 +54,13 @@ export class SettingsManager {
             this.scrollSensitivitySlider.value = savedScroll;
             this.scrollSensitivityLabel.textContent = savedScroll;
             this.onScrollSensitivityChange(val);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('remote-mouse-theme');
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-mode');
+            this.themeToggle.checked = true;
         }
 
         // Events
@@ -86,6 +96,16 @@ export class SettingsManager {
 
         this.scrollSensitivitySlider.addEventListener('change', () => {
             localStorage.setItem('remote-mouse-scroll-sensitivity', this.scrollSensitivitySlider.value);
+        });
+
+        this.themeToggle.addEventListener('change', () => {
+            if (this.themeToggle.checked) {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('remote-mouse-theme', 'light');
+            } else {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('remote-mouse-theme', 'dark');
+            }
         });
     }
 }

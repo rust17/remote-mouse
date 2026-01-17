@@ -22,6 +22,29 @@
   --scroll-strip-bg: rgba(255, 255, 255, 0.03);
   --scroll-strip-active: rgba(59, 130, 246, 0.1);
   --scroll-strip-border: rgba(255, 255, 255, 0.05);
+
+  /* Theming Variables (extracted for Light Mode) */
+  --status-bg: rgba(30, 35, 45, 0.8);
+  --status-border: rgba(255, 255, 255, 0.05);
+  
+  --strip-handle: rgba(255, 255, 255, 0.1);
+  
+  --fn-btn-bg: rgba(45, 50, 60, 0.3);
+  --fn-btn-border: rgba(255, 255, 255, 0.12);
+  --fn-btn-highlight: rgba(255, 255, 255, 0.05);
+  --fn-btn-active-bg: rgba(255, 255, 255, 0.15);
+  
+  --fab-bg: rgba(30, 35, 45, 0.4);
+  --fab-border: rgba(255, 255, 255, 0.15);
+  --fab-shadow: rgba(0, 0, 0, 0.5);
+  
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --modal-shadow: rgba(0, 0, 0, 0.5);
+  
+  --input-range-track: rgba(255, 255, 255, 0.1);
+
+  --action-key-bg: rgba(42, 46, 56, 0.7);
 }
 
 * {
@@ -65,12 +88,12 @@ body, html {
 }
 
 #status-indicator {
-  background: rgba(30, 35, 45, 0.8);
+  background: var(--status-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   padding: 6px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--status-border);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -147,7 +170,7 @@ body, html {
   width: 4px;
   height: 40px;
   border-radius: 2px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--strip-handle);
   transition: opacity 0.3s;
 }
 
@@ -197,11 +220,11 @@ body, html {
 }
 
 .fn-btn {
-  background: rgba(45, 50, 60, 0.3); /* More transparent but slightly lighter */
+  background: var(--fn-btn-bg); /* More transparent but slightly lighter */
   backdrop-filter: blur(20px) saturate(180%); /* iOS-style saturation */
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12); /* Brighter border */
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05); /* Top inner highlight */
+  border: 1px solid var(--fn-btn-border); /* Brighter border */
+  box-shadow: inset 0 1px 0 0 var(--fn-btn-highlight); /* Top inner highlight */
   border-radius: 12px;
   color: var(--text-secondary);
   height: 48px;
@@ -219,7 +242,7 @@ body, html {
 /* Active State (Press) with highlight */
 .fn-btn:active {
   transform: translateY(1px);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--fn-btn-active-bg);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
 }
@@ -234,7 +257,7 @@ body, html {
 
 /* Key Groups Styling */
 .action-key {
-  background-color: rgba(42, 46, 56, 0.7);
+  background-color: var(--action-key-bg);
   color: var(--text-primary);
 }
 
@@ -254,12 +277,12 @@ body, html {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(30, 35, 45, 0.4); /* Clearer glass */
+  background: var(--fab-bg); /* Clearer glass */
   backdrop-filter: blur(25px) saturate(180%); /* Heavy blur & saturation */
   -webkit-backdrop-filter: blur(25px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.15); /* Distinct border */
+  border: 1px solid var(--fab-border); /* Distinct border */
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.5), /* Deep drop shadow */
+    0 12px 32px var(--fab-shadow), /* Deep drop shadow */
     inset 0 1px 0 0 rgba(255, 255, 255, 0.1); /* Top inner highlight */
   border-radius: 20px;
   padding: 4px;
@@ -345,7 +368,7 @@ body, html {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--modal-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -367,8 +390,8 @@ body, html {
   width: 90%;
   max-width: 320px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border: 1px solid var(--modal-border);
+  box-shadow: 0 10px 40px var(--modal-shadow);
   padding: 20px;
   transform: scale(1);
   transition: transform 0.2s;
@@ -458,6 +481,66 @@ input[type=range]::-webkit-slider-runnable-track {
   width: 100%;
   height: 4px;
   cursor: pointer;
-  background: rgba(255,255,255,0.1);
+  background: var(--input-range-track);
   border-radius: 2px;
+}
+
+/* --- Light Mode Overrides --- */
+.light-mode {
+  --bg-color: #f8fafc;
+  --panel-bg: #ffffff;
+  --touchpad-bg-center: #f1f5f9;
+  --touchpad-bg-edge: #e2e8f0;
+
+  --accent-color: #3b82f6; 
+  --accent-glow: rgba(59, 130, 246, 0.4);
+
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+
+  --btn-bg: #f1f5f9;
+  --btn-active: #e2e8f0;
+  --btn-border: #cbd5e1;
+
+  --status-green: #16a34a;
+  --status-red: #dc2626;
+  --status-yellow: #ca8a04;
+  
+  --scroll-strip-bg: rgba(0, 0, 0, 0.03);
+  --scroll-strip-active: rgba(59, 130, 246, 0.1);
+  --scroll-strip-border: rgba(0, 0, 0, 0.05);
+
+  --status-bg: rgba(255, 255, 255, 0.8);
+  --status-border: rgba(0, 0, 0, 0.05);
+  
+  --strip-handle: rgba(0, 0, 0, 0.1);
+  
+  --fn-btn-bg: rgba(255, 255, 255, 0.6);
+  --fn-btn-border: rgba(0, 0, 0, 0.1);
+  --fn-btn-highlight: rgba(255, 255, 255, 0.5);
+  --fn-btn-active-bg: rgba(0, 0, 0, 0.05);
+  
+  --fab-bg: rgba(255, 255, 255, 0.8);
+  --fab-border: rgba(0, 0, 0, 0.1);
+  --fab-shadow: rgba(0, 0, 0, 0.1);
+  
+  --modal-overlay: rgba(0, 0, 0, 0.2);
+  --modal-border: rgba(0, 0, 0, 0.05);
+  --modal-shadow: rgba(0, 0, 0, 0.1);
+  
+  --input-range-track: rgba(0, 0, 0, 0.1);
+
+  --action-key-bg: rgba(255, 255, 255, 0.6);
+}
+
+.light-mode #fn-panel {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.light-mode #status-indicator {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.light-mode .fn-btn {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
 }
