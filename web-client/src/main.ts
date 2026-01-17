@@ -3,6 +3,7 @@ import {
 } from './core/protocol';
 import { Transport } from './core/transport';
 import { TouchpadHandler } from './input/touchpad';
+import { ScrollStripHandler } from './input/scroll-strip';
 import { KeyboardHandler } from './input/keyboard';
 import { StatusBar } from './ui/status-bar';
 import { SettingsManager } from './ui/settings';
@@ -10,6 +11,7 @@ import { SettingsManager } from './ui/settings';
 class RemoteMouseApp {
     private transport: Transport;
     private touchpad: TouchpadHandler;
+    private scrollStrip: ScrollStripHandler;
     private keyboard: KeyboardHandler;
     private statusBar: StatusBar;
     private moveBuffer = new ArrayBuffer(5);
@@ -40,7 +42,15 @@ class RemoteMouseApp {
             }
         );
 
-        // 4. Keyboard
+        // 4. Scroll Strip
+        this.scrollStrip = new ScrollStripHandler(
+            document.getElementById('scroll-strip')!,
+            {
+                onScroll: (sx, sy) => this.sendScroll(sx, sy)
+            }
+        );
+
+        // 5. Keyboard
         this.keyboard = new KeyboardHandler(
             document.getElementById('keyboard-input')! as HTMLTextAreaElement,
             document.getElementById('btn-keyboard')!,
@@ -51,7 +61,7 @@ class RemoteMouseApp {
             }
         );
 
-        // 5. Settings
+        // 6. Settings
         new SettingsManager(
             document.getElementById('settings-modal')!,
             document.getElementById('btn-settings')!,
@@ -61,7 +71,10 @@ class RemoteMouseApp {
             document.getElementById('scroll-sensitivity-slider')! as HTMLInputElement,
             document.getElementById('scroll-sensitivity-value')!,
             (val) => this.touchpad.setSensitivity(val),
-            (val) => this.touchpad.setScrollSensitivity(val)
+            (val) => {
+                this.touchpad.setScrollSensitivity(val);
+                this.scrollStrip.setSensitivity(val);
+            }
         );
 
         // Connect

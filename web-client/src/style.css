@@ -17,6 +17,11 @@
   --status-green: #22c55e;
   --status-red: #ef4444;
   --status-yellow: #eab308;
+  
+  --scroll-strip-width: 40px;
+  --scroll-strip-bg: rgba(255, 255, 255, 0.03);
+  --scroll-strip-active: rgba(59, 130, 246, 0.1);
+  --scroll-strip-border: rgba(255, 255, 255, 0.05);
 }
 
 * {
@@ -119,6 +124,44 @@ body, html {
   50% { opacity: 0.7; transform: scale(0.9); }
 }
 
+/* --- Scroll Strip --- */
+#scroll-strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--scroll-strip-width);
+  background: var(--scroll-strip-bg);
+  border-right: 1px solid var(--scroll-strip-border);
+  z-index: 8; /* Below status bar (10) but above touchpad base */
+  transition: background-color 0.2s, width 0.2s;
+}
+
+/* Visual cue for scroll area */
+#scroll-strip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: opacity 0.3s;
+}
+
+#scroll-strip.active {
+  background-color: var(--scroll-strip-active);
+  /* slight width expansion on touch could feel nice, but maybe too distracting? Let's keep it simple first */
+}
+
+#scroll-strip.active::after {
+  opacity: 0.4;
+  background-color: var(--accent-color);
+}
+
+
 /* --- Touchpad --- */
 #touchpad {
   flex: 1;
@@ -133,6 +176,9 @@ body, html {
   background-image:
     radial-gradient(circle at center, transparent 0%, var(--touchpad-bg-edge) 120%),
     repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 10px);
+    
+  /* Ensure touchpad content doesn't overlap the scroll strip visually if we want distinct areas */
+  padding-left: var(--scroll-strip-width); 
 }
 
 
