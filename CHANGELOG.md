@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.0.2] - 2026-01-17
+
+### Added
+- **UI**: Added Light Mode toggle and theming support.
+- **Settings**: Added scroll position toggle (left/right) for better accessibility.
+
+### Changed
+- **Docs**: Updated README with new screenshots showing different modes.
+- **CI**: Updated release workflow artifact paths.
+
 # [v1.0.1] - 2026-01-17
 
 ### Added

@@ -3,7 +3,9 @@
 [English](README.md) | [简体中文](docs/README_ZH.md)
 
 <p align="center">
-  <img src="docs/remote-mouse.png" alt="Remote Mouse" width="300" />
+  <img src="docs/dart.jpg" width="250" />
+  <img src="docs/light.jpg" width="250" />
+  <img src="docs/light-setting.jpg" width="250" />
 </p>
 
 ---
