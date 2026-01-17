@@ -7,6 +7,7 @@ export class SettingsManager {
     private scrollSensitivitySlider: HTMLInputElement;
     private scrollSensitivityLabel: HTMLElement;
     private themeToggle: HTMLInputElement;
+    private scrollPosToggle: HTMLInputElement;
 
     private onSensitivityChange: (val: number) => void;
     private onScrollSensitivityChange: (val: number) => void;
@@ -20,6 +21,7 @@ export class SettingsManager {
         scrollSlider: HTMLInputElement,
         scrollLabel: HTMLElement,
         themeToggle: HTMLInputElement,
+        scrollPosToggle: HTMLInputElement,
         onSensitivityChange: (val: number) => void,
         onScrollSensitivityChange: (val: number) => void
     ) {
@@ -31,6 +33,7 @@ export class SettingsManager {
         this.scrollSensitivitySlider = scrollSlider;
         this.scrollSensitivityLabel = scrollLabel;
         this.themeToggle = themeToggle;
+        this.scrollPosToggle = scrollPosToggle;
         this.onSensitivityChange = onSensitivityChange;
         this.onScrollSensitivityChange = onScrollSensitivityChange;
 
@@ -61,6 +64,13 @@ export class SettingsManager {
         if (savedTheme === 'light') {
             document.body.classList.add('light-mode');
             this.themeToggle.checked = true;
+        }
+
+        // Load saved scroll position
+        const savedScrollPos = localStorage.getItem('remote-mouse-scroll-pos');
+        if (savedScrollPos === 'right') {
+            document.body.classList.add('scroll-right');
+            this.scrollPosToggle.checked = true;
         }
 
         // Events
@@ -105,6 +115,16 @@ export class SettingsManager {
             } else {
                 document.body.classList.remove('light-mode');
                 localStorage.setItem('remote-mouse-theme', 'dark');
+            }
+        });
+
+        this.scrollPosToggle.addEventListener('change', () => {
+            if (this.scrollPosToggle.checked) {
+                document.body.classList.add('scroll-right');
+                localStorage.setItem('remote-mouse-scroll-pos', 'right');
+            } else {
+                document.body.classList.remove('scroll-right');
+                localStorage.setItem('remote-mouse-scroll-pos', 'left');
             }
         });
     }

@@ -71,6 +71,7 @@ class RemoteMouseApp {
             document.getElementById('scroll-sensitivity-slider')! as HTMLInputElement,
             document.getElementById('scroll-sensitivity-value')!,
             document.getElementById('theme-toggle')! as HTMLInputElement,
+            document.getElementById('scroll-pos-toggle')! as HTMLInputElement,
             (val) => this.touchpad.setSensitivity(val),
             (val) => {
                 this.touchpad.setScrollSensitivity(val);
