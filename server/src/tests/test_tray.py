@@ -5,71 +5,98 @@ from server.ui.tray_icon import TrayIcon
 
 def test_tray_initialization():
     """Test the initial state of the TrayIcon."""
+    mock_restart = MagicMock()
+    mock_log_toggle = MagicMock()
     tray = TrayIcon(
         port=8000,
         ip_address="127.0.0.1",
         on_exit_callback=lambda: None,
+        restart_callback=mock_restart,
+        on_log_toggle_callback=mock_log_toggle,
         initial_logging_state=True,
     )
 
     assert tray.port == 8000
     assert tray.ip_address == "127.0.0.1"
-    assert tray.should_restart is False
     assert tray.logging_enabled is True
     assert tray.icon is None
+    assert tray.restart_callback == mock_restart
+    assert tray.on_log_toggle_callback == mock_log_toggle
 
 
 def test_on_restart():
-    """Test that _on_restart sets the flag and stops the icon loop."""
-    tray = TrayIcon(port=8000, ip_address="127.0.0.1", on_exit_callback=lambda: None)
+    """Test that _on_restart calls the callback and DOES NOT stop the icon loop."""
+    mock_restart = MagicMock()
+    tray = TrayIcon(
+        port=8000,
+        ip_address="127.0.0.1",
+        on_exit_callback=lambda: None,
+        restart_callback=mock_restart,
+        on_log_toggle_callback=lambda _: None,
+    )
     mock_icon = MagicMock()
 
     # Simulate clicking "Restart"
     tray._on_restart(mock_icon, None)
 
-    # Verify state change and method call
-    assert tray.should_restart is True
-    mock_icon.stop.assert_called_once()
+    # Verify logic
+    mock_restart.assert_called_once()
+    mock_icon.stop.assert_not_called()
 
 
 def test_on_quit():
-    """Test that _on_quit keeps flag False and stops the icon loop."""
-    tray = TrayIcon(port=8000, ip_address="127.0.0.1", on_exit_callback=lambda: None)
+    """Test that _on_quit stops the icon loop."""
+    tray = TrayIcon(
+        port=8000,
+        ip_address="127.0.0.1",
+        on_exit_callback=lambda: None,
+        restart_callback=lambda: None,
+        on_log_toggle_callback=lambda _: None,
+    )
     mock_icon = MagicMock()
 
     # Simulate clicking "Exit"
     tray._on_quit(mock_icon, None)
 
-    # Verify state change and method call
-    assert tray.should_restart is False
+    # Verify logic
     mock_icon.stop.assert_called_once()
 
 
 def test_toggle_logging(mock_tray_deps):
     """Test toggling logging state."""
     mock_deps = mock_tray_deps
+    mock_log_toggle = MagicMock()
+
     tray = TrayIcon(
         port=8000,
         ip_address="127.0.0.1",
         on_exit_callback=lambda: None,
+        restart_callback=lambda: None,
+        on_log_toggle_callback=mock_log_toggle,
         initial_logging_state=False,
     )
 
     # Toggle On
     tray._on_toggle_logging(None, None)
     assert tray.logging_enabled is True
-    mock_deps["configure_logging"].assert_called_with(True)
+    mock_log_toggle.assert_called_with(True)
 
     # Toggle Off
     tray._on_toggle_logging(None, None)
     assert tray.logging_enabled is False
-    mock_deps["configure_logging"].assert_called_with(False)
+    mock_log_toggle.assert_called_with(False)
 
 
 def test_run_constructs_ui_correctly(mock_tray_deps):
     """Test that run() creates the menu with correct items and starts the icon."""
     mock_deps = mock_tray_deps
-    tray = TrayIcon(port=9999, ip_address="192.168.1.5", on_exit_callback=lambda: None)
+    tray = TrayIcon(
+        port=9999,
+        ip_address="192.168.1.5",
+        on_exit_callback=lambda: None,
+        restart_callback=lambda: None,
+        on_log_toggle_callback=lambda _: None,
+    )
 
     tray.run()
 

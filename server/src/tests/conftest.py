@@ -41,7 +41,6 @@ def mock_tray_deps():
         patch("server.ui.tray_icon.pystray") as mock_pystray,
         patch("server.ui.tray_icon.Image") as mock_image,
         patch("server.ui.tray_icon.get_asset_path") as mock_get_asset_path,
-        patch("server.ui.tray_icon.configure_logging") as mock_config_log,
     ):
         # Setup the mock Icon instance returned by pystray.Icon(...)
         mock_icon_instance = MagicMock()
@@ -51,6 +50,5 @@ def mock_tray_deps():
             "pystray": mock_pystray,
             "image": mock_image,
             "get_asset_path": mock_get_asset_path,
-            "configure_logging": mock_config_log,
             "icon_instance": mock_icon_instance,
         }
