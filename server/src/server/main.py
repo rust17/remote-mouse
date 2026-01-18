@@ -66,7 +66,13 @@ def main():
             logger.info("Restarting application...")
 
             # Construct new command args
-            new_args = [sys.executable, "-m", "server.main", "--port", str(args.port)]
+            if getattr(sys, 'frozen', False):
+                # If packaged with PyInstaller, sys.executable is the exe itself
+                # and we don't need "-m server.main"
+                new_args = [sys.executable, "--port", str(args.port)]
+            else:
+                # If running from source, use python executable with module flag
+                new_args = [sys.executable, "-m", "server.main", "--port", str(args.port)]
 
             # Use the logging state from tray
             if tray.logging_enabled:
