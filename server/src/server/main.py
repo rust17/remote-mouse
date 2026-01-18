@@ -79,15 +79,33 @@ def main():
                 new_args.append("--log")
 
             logger.info(f"Restart command: {new_args}")
-            
+
             # Prepare environment for the new process
             env = os.environ.copy()
-            # Remove _MEIPASS2 to force re-extraction in the new process
-            # (prevent using parent's temp dir which will be deleted)
-            env.pop('_MEIPASS2', None)
+
+            # PyInstaller handling
+            if getattr(sys, 'frozen', False):
+                # 1. Remove _MEIPASS2 to force re-extraction
+                env.pop('_MEIPASS2', None)
+
+                # 2. Clean up PATH: Remove the current temp dir from PATH
+                # PyInstaller adds the temp dir to PATH, which can cause the child process
+                # to try loading DLLs (like PIL's _imaging) from the deleting parent dir.
+                if hasattr(sys, '_MEIPASS'):
+                    current_temp_dir = sys._MEIPASS
+                    path_list = env.get('PATH', '').split(os.pathsep)
+                    # Filter out paths that start with the temp dir
+                    clean_path_list = [
+                        p for p in path_list
+                        if not p.startswith(current_temp_dir)
+                    ]
+                    env['PATH'] = os.pathsep.join(clean_path_list)
 
             # Spawn a new process and exit the current one
-            subprocess.Popen(new_args, env=env)
+            # Set cwd to the executable directory (or script directory) to be safe
+            cwd = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+
+            subprocess.Popen(new_args, env=env, cwd=cwd)
             sys.exit(0)
         else:
             logger.info("Application exited gracefully.")

@@ -71,4 +71,4 @@ jobs:
           body: ${{ github.event.inputs.release_body }}
           files: assets/**/*
           draft: false
-          prerelease: false
+          prerelease: true
