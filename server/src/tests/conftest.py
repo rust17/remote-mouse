@@ -32,3 +32,25 @@ def client():
     """Create a TestClient for the FastAPI app."""
     app = create_app()
     return TestClient(app)
+
+
+@pytest.fixture
+def mock_tray_deps():
+    """Mock external dependencies for TrayIcon to avoid GUI interactions."""
+    with (
+        patch("server.ui.tray_icon.pystray") as mock_pystray,
+        patch("server.ui.tray_icon.Image") as mock_image,
+        patch("server.ui.tray_icon.get_asset_path") as mock_get_asset_path,
+        patch("server.ui.tray_icon.configure_logging") as mock_config_log,
+    ):
+        # Setup the mock Icon instance returned by pystray.Icon(...)
+        mock_icon_instance = MagicMock()
+        mock_pystray.Icon.return_value = mock_icon_instance
+
+        yield {
+            "pystray": mock_pystray,
+            "image": mock_image,
+            "get_asset_path": mock_get_asset_path,
+            "configure_logging": mock_config_log,
+            "icon_instance": mock_icon_instance,
+        }

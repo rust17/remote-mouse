@@ -10,6 +10,7 @@ from server.config import (
     TRAY_ICON_BG_COLOR,
     TRAY_ICON_FG_COLOR,
     get_asset_path,
+    configure_logging,
 )
 
 
@@ -20,12 +21,15 @@ def create_image():
 
 
 class TrayIcon:
-    def __init__(self, port: int, ip_address: str, on_exit_callback):
+    def __init__(
+        self, port: int, ip_address: str, on_exit_callback, initial_logging_state: bool = False
+    ):
         self.port = port
         self.ip_address = ip_address
         self.on_exit_callback = on_exit_callback
         self.icon = None
         self.should_restart = False
+        self.logging_enabled = initial_logging_state
 
     def _on_restart(self, icon, item):
         logger.info("Restart requested from tray icon...")
@@ -38,11 +42,20 @@ class TrayIcon:
         icon.stop()
         # Control returns to main.py after icon.stop()
 
+    def _on_toggle_logging(self, icon, item):
+        self.logging_enabled = not self.logging_enabled
+        configure_logging(self.logging_enabled)
+        logger.info(f"Logging set to {self.logging_enabled}")
+
     def run(self):
+        def get_log_label(item):
+            return "Disable Logs" if self.logging_enabled else "Enable Logs"
+
         menu = pystray.Menu(
             pystray.MenuItem(
                 f"Address: http://{self.ip_address}:{self.port}", lambda: None, enabled=False
             ),
+            pystray.MenuItem(get_log_label, self._on_toggle_logging),
             pystray.MenuItem("Restart", self._on_restart),
             pystray.MenuItem("Exit", self._on_quit),
         )

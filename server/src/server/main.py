@@ -3,6 +3,7 @@ import uvicorn
 import sys
 import os
 import subprocess
+import argparse
 from loguru import logger
 
 from server.config import DEFAULT_PORT, configure_logging
@@ -11,19 +12,29 @@ from server.services.web import create_app
 from server.ui.tray_icon import TrayIcon
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Remote Mouse Server")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to listen on")
+    parser.add_argument("--log", action="store_true", help="Enable file logging")
+    return parser.parse_args()
+
+
 def main():
-    configure_logging(False)
-    logger.info("Application starting...")
+    args = parse_args()
+
+    # Configure logging based on args
+    configure_logging(args.log)
+    logger.info(f"Application starting... (Port: {args.port}, Log: {args.log})")
 
     # 1. Initialize Services
-    mdns = MDNSResponder(port=DEFAULT_PORT)
+    mdns = MDNSResponder(port=args.port)
 
     def run_server_thread():
         app = create_app()
-        logger.info(f"Starting server on port {DEFAULT_PORT}")
+        logger.info(f"Starting server on port {args.port}")
         try:
             # 设置 log_config=None 让 uvicorn 使用我们已经在 main 中配置好的 logging
-            uvicorn.run(app, host="0.0.0.0", port=DEFAULT_PORT, log_level="info", log_config=None)
+            uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info", log_config=None)
         except Exception as e:
             logger.error(f"Server crashed: {e}")
 
@@ -31,7 +42,12 @@ def main():
         logger.info("Cleaning up...")
         mdns.unregister()
 
-    tray = TrayIcon(port=DEFAULT_PORT, ip_address=mdns.get_local_ip(), on_exit_callback=on_exit)
+    tray = TrayIcon(
+        port=args.port,
+        ip_address=mdns.get_local_ip(),
+        on_exit_callback=on_exit,
+        initial_logging_state=args.log,
+    )
 
     try:
         # 2. Start mDNS
@@ -48,8 +64,17 @@ def main():
         on_exit()
         if tray.should_restart:
             logger.info("Restarting application...")
-            # Spawn a new process and exit the current one to ensure GUI (AppKit) cleanup
-            subprocess.Popen([sys.executable] + sys.argv)
+
+            # Construct new command args
+            new_args = [sys.executable, "-m", "server.main", "--port", str(args.port)]
+
+            # Use the logging state from tray
+            if tray.logging_enabled:
+                new_args.append("--log")
+
+            logger.info(f"Restart command: {new_args}")
+            # Spawn a new process and exit the current one
+            subprocess.Popen(new_args)
             sys.exit(0)
         else:
             logger.info("Application exited gracefully.")
