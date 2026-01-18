@@ -25,20 +25,25 @@ class TrayIcon:
         self.ip_address = ip_address
         self.on_exit_callback = on_exit_callback
         self.icon = None
+        self.should_restart = False
+
+    def _on_restart(self, icon, item):
+        logger.info("Restart requested from tray icon...")
+        self.should_restart = True
+        icon.stop()
 
     def _on_quit(self, icon, item):
         logger.info("Stopping from tray icon...")
+        self.should_restart = False
         icon.stop()
-        if self.on_exit_callback:
-            self.on_exit_callback()
-        # Ensure process exits if not handled by callback completely
-        os._exit(0)
+        # Control returns to main.py after icon.stop()
 
     def run(self):
         menu = pystray.Menu(
             pystray.MenuItem(
                 f"Address: http://{self.ip_address}:{self.port}", lambda: None, enabled=False
             ),
+            pystray.MenuItem("Restart", self._on_restart),
             pystray.MenuItem("Exit", self._on_quit),
         )
         self.icon = pystray.Icon(APP_NAME, create_image(), APP_NAME, menu)

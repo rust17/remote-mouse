@@ -1,5 +1,8 @@
 import threading
 import uvicorn
+import sys
+import os
+import subprocess
 from loguru import logger
 
 from server.config import DEFAULT_PORT, configure_logging
@@ -9,7 +12,7 @@ from server.ui.tray_icon import TrayIcon
 
 
 def main():
-    configure_logging(True)
+    configure_logging(False)
     logger.info("Application starting...")
 
     # 1. Initialize Services
@@ -40,6 +43,17 @@ def main():
 
         # 4. Start Tray Icon (Main Thread)
         tray.run()
+
+        # 5. Handle Exit or Restart
+        on_exit()
+        if tray.should_restart:
+            logger.info("Restarting application...")
+            # Spawn a new process and exit the current one to ensure GUI (AppKit) cleanup
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit(0)
+        else:
+            logger.info("Application exited gracefully.")
+            sys.exit(0)
 
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
