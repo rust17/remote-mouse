@@ -79,8 +79,15 @@ def main():
                 new_args.append("--log")
 
             logger.info(f"Restart command: {new_args}")
+            
+            # Prepare environment for the new process
+            env = os.environ.copy()
+            # Remove _MEIPASS2 to force re-extraction in the new process
+            # (prevent using parent's temp dir which will be deleted)
+            env.pop('_MEIPASS2', None)
+
             # Spawn a new process and exit the current one
-            subprocess.Popen(new_args)
+            subprocess.Popen(new_args, env=env)
             sys.exit(0)
         else:
             logger.info("Application exited gracefully.")
