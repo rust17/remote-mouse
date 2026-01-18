@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.0.3] - 2026-01-18
+
+### Added
+- **Server**: Added a "Restart" option to the system tray menu to restart the entire application.
+- **Server**: Added a "Enable/Disable Logs" toggle to the system tray menu for real-time logging control.
+- **Server**: Added command-line arguments (`--port`, `--log`) to configure the initial port and logging state.
+- **Server**: Implemented graceful restart logic that preserves command-line arguments and releases system resources properly.
+
 # [v1.0.2] - 2026-01-17
 
 ### Added
