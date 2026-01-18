@@ -5,10 +5,14 @@ All notable changes to this project will be documented in this file.
 # [v1.0.3] - 2026-01-18
 
 ### Added
-- **Server**: Added a "Restart" option to the system tray menu to restart the entire application.
+- **Server**: Added a "Restart" option to the system tray menu. Now uses service-level soft restart to instantly reload the web server and mDNS without restarting the process.
 - **Server**: Added a "Enable/Disable Logs" toggle to the system tray menu for real-time logging control.
 - **Server**: Added command-line arguments (`--port`, `--log`) to configure the initial port and logging state.
-- **Server**: Implemented graceful restart logic that preserves command-line arguments and releases system resources properly.
+
+### Fixed
+- **Server**: Fixed a crash on Windows when restarting the application in packaged (PyInstaller) builds by replacing process spawning with internal service reloading.
+- **Server**: Fixed a crash in non-console environments (like Windows GUI mode) caused by logging configuration.
+- **Server**: Fixed an issue where toggling logs off did not correctly release file handlers.
 
 # [v1.0.2] - 2026-01-17
 
