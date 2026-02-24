@@ -3,6 +3,10 @@
 [English](README.md) | [简体中文](docs/README_ZH.md)
 
 <p align="center">
+  <img src="docs/remote-mouse.gif" width="1920" />
+</p>
+
+<p align="center">
   <img src="docs/dart.jpg" width="250" />
   <img src="docs/light.jpg" width="250" />
   <img src="docs/light-setting.jpg" width="250" />
