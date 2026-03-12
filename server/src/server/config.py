@@ -1,4 +1,5 @@
 import sys
+import shutil
 from pathlib import Path
 from loguru import logger
 
@@ -23,10 +24,24 @@ def get_share_dir() -> Path:
 
 
 def get_static_dir() -> Path:
-    # 1. PyInstaller environment: points to sys._MEIPASS/web_dist
+    # 1. PyInstaller environment
     if getattr(sys, "frozen", False):
         bundle_dir = Path(sys._MEIPASS)
-        static_dir = bundle_dir / "web_dist"
+        source_static = bundle_dir / "web_dist"
+        
+        # Target: ~/.remote-mouse/web_dist (Persistent storage to avoid /tmp cleanup)
+        target_static = get_share_dir() / "web_dist"
+        
+        try:
+            # Sync files to persistent directory
+            if target_static.exists():
+                shutil.rmtree(target_static)
+            shutil.copytree(source_static, target_static)
+            logger.info(f"Static files synced to: {target_static}")
+            return target_static
+        except Exception as e:
+            logger.error(f"Failed to sync static files to persistent storage: {e}")
+            return source_static  # Fallback to temporary one
     else:
         # 2. Dev environment: points to ../../../web-client/dist
         # project_root is server/ (where pyproject.toml is)

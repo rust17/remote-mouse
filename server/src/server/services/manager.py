@@ -1,4 +1,5 @@
 import threading
+import socket
 import uvicorn
 from loguru import logger
 
@@ -26,6 +27,15 @@ class ServiceManager:
     def start(self):
         logger.info(f"Starting services (Debug: {self.debug})...")
         try:
+            # 0. Check if port is already in use
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(("0.0.0.0", self.port))
+                except socket.error:
+                    error_msg = f"Port {self.port} is already in use by another process."
+                    logger.error(error_msg)
+                    raise RuntimeError(error_msg)
+
             # 1. Start mDNS
             self.mdns = MDNSResponder(port=self.port)
             self.mdns.register()
