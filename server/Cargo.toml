@@ -1,0 +1,37 @@
+[package]
+name = "remote-mouse"
+version = "4.0.0"
+edition = "2021"
+
+[dependencies]
+# 异步运行时与 Web 服务
+tokio = { version = "1.43.0", features = ["full"] }
+axum = { version = "0.8.1", features = ["ws"] }
+tower-http = { version = "0.6.2", features = ["fs", "cors"] }
+
+# 输入控制 (核心重构目标)
+enigo = { version = "0.3.0" }
+
+# 服务发现 (mDNS)
+mdns-sd = "0.13.2"
+
+# 系统托盘与 GUI 事件循环 (主线程)
+tray-icon = "0.19.4"
+tao = "0.31.2"
+
+# 静态资源打包 (将前端编译进单文件)
+rust-embed = { version = "8.6.0", features = ["axum"] }
+
+# 二进制协议处理
+bytes = "1.10.0"
+byteorder = "1.5.0"
+
+# 日志与工具
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+
+[build-dependencies]
+# 跨平台图标与清单支持
+embed-resource = "2.5.1"
