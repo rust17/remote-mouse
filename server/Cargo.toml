@@ -16,8 +16,9 @@ enigo = { version = "0.3.0" }
 mdns-sd = "0.13.2"
 
 # 系统托盘与 GUI 事件循环 (主线程)
-tray-icon = "0.19.4"
-tao = "0.31.2"
+tray-icon = "0.19"
+tao = "0.30"
+image = "0.25"
 
 # 静态资源打包 (将前端编译进单文件)
 rust-embed = { version = "8.6.0", features = ["axum"] }

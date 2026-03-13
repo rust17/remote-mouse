@@ -1,0 +1,32 @@
+# --- Rust (Server) ---
+server/target/
+server/Cargo.lock
+# 如果您希望在二进制库中锁定版本，可以取消注释 Cargo.lock
+# 但是对于 binary 项目通常建议提交 lock 文件，这里由于我们是重构，暂时忽略 target 即可
+
+# --- Node.js (Web Client) ---
+web-client/node_modules/
+web-client/dist/
+web-client/.cache/
+web-client/package-lock.json
+
+# --- Python (Legacy Server Backup) ---
+server-py/.venv/
+server-py/__pycache__/
+server-py/dist/
+server-py/build/
+server-py/*.spec
+server-py/.pytest_cache/
+server-py/.ruff_cache/
+
+# --- IDEs & OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs & Temp ---
+*.log
+/Users/circle/.gemini/tmp/

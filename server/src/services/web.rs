@@ -73,8 +73,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     info!("WebSocket client disconnected");
 }
 
-async fn static_handler(axum::http::Request<axum::body::Body>Action: axum::http::Request<axum::body::Body>) -> impl IntoResponse {
-    let path = Action.uri().path().trim_start_matches('/');
+async fn static_handler(req: axum::http::Request<axum::body::Body>) -> impl IntoResponse {
+    let path = req.uri().path().trim_start_matches('/');
     
     // 如果路径为空，默认提供 index.html
     let asset_path = if path.is_empty() { "index.html" } else { path };

@@ -22,9 +22,19 @@ impl InputService {
         }
     }
 
-    pub fn mouse_click(&mut self, button: Button) {
+    pub fn mouse_click(&mut self, button: Button, modifiers: &[Key]) {
+        // 按下修饰键
+        for &m in modifiers {
+            let _ = self.enigo.key(m, Direction::Press);
+        }
+
         if let Err(e) = self.enigo.button(button, Direction::Click) {
             error!("Mouse click failed: {:?}", e);
+        }
+
+        // 释放修饰键
+        for &m in modifiers.iter().rev() {
+            let _ = self.enigo.key(m, Direction::Release);
         }
     }
 
