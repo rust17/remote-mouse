@@ -53,13 +53,6 @@ jobs:
           path: assets/linux
           workflow_conclusion: success
 
-      - name: Rename Artifacts
-        run: |
-          mv assets/macos/RemoteMouse assets/RemoteMouse-macos
-          mv assets/linux/RemoteMouse assets/RemoteMouse-linux
-          mv assets/windows/RemoteMouse.exe assets/RemoteMouse-windows.exe
-          rm -rf assets/macos assets/linux assets/windows
-
       - name: Display downloaded files
         run: ls -R assets
 

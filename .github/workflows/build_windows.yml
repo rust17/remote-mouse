@@ -1,8 +1,8 @@
 name: Build Windows Server
 
 on:
-  push:
-    branches: [ "master" ]
+  pull_request:
+    branches: [ master ]
     paths:
       - 'server/**'
       - 'web-client/**'
@@ -21,8 +21,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: web-client/package-lock.json
 
     - name: Build Web Client
       working-directory: ./web-client
@@ -30,23 +28,23 @@ jobs:
         npm ci
         npm run build
 
-    # --- 2. Build Python Server ---
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
+    # --- 2. Build Tauri Server ---
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
-        python-version: '3.13'
-        enable-cache: true
-        cache-dependency-glob: "server/uv.lock"
+        targets: x86_64-pc-windows-msvc
 
-    - name: Build with PyInstaller
+    - name: Install Tauri CLI
+      run: cargo install tauri-cli --version "^2.0.0"
+
+    - name: Build Tauri App
       working-directory: ./server
-      # --add-data format for Windows: "source_path;dest_folder_name"
-      # Embedding web-client/dist into web_dist folder inside the executable
-      run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist;web_dist" --add-data "src/server/assets;assets" src/server/main.py
+      run: cargo tauri build
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: RemoteMouse-exe
-        path: server/dist/RemoteMouse.exe
+        path: |
+          server/target/release/bundle/nsis/*.exe
+          server/target/release/bundle/msi/*.msi

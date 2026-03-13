@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Remote Mouse",
+  "version": "4.0.0",
+  "identifier": "com.remotemouse.app",
+  "build": {
+    "frontendDist": null
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "assets/icon.png",
+      "assets/icon.icns",
+      "assets/icon.ico"
+    ],
+    "macOS": {
+      "infoPlist": "Info.plist"
+    }
+  }
+}

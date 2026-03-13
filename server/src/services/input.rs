@@ -2,7 +2,7 @@ use enigo::{
     Axis, Button, Direction, Enigo, Key, Keyboard, Mouse, Settings,
 };
 use std::error::Error;
-use tracing::{error, info};
+use tracing::error;
 
 pub struct InputService {
     enigo: Enigo,
