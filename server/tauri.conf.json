@@ -23,5 +23,15 @@
     "macOS": {
       "infoPlist": "Info.plist"
     }
+  },
+  "plugins": {
+    "autostart": null,
+    "dialog": null,
+    "updater": {
+      "endpoints": [
+        "https://github.com/your-username/your-repo/releases/latest/download/latest.json"
+      ],
+      "pubkey": "CONTENTS_OF_YOUR_PUBLIC_KEY_HERE"
+    }
   }
 }

@@ -12,9 +12,14 @@ use crate::core::protocol::ProtocolCommand;
 use crate::services::{input::InputService, mdns::MDNSResponder, web::WebService};
 
 use tauri::{
-    menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{TrayIconBuilder},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    tray::TrayIconBuilder,
 };
+use tauri_plugin_autostart::ManagerExt as _;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_updater::UpdaterExt as _;
+
+const DEFAULT_PORT: u16 = 9997;
 
 fn main() {
     // 1. 初始化日志
@@ -26,23 +31,118 @@ fn main() {
     info!("Starting Remote Mouse Tauri Server...");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--hidden"]),
+        ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
+            let ip = local_ip_address::local_ip()
+                .map(|ip| ip.to_string())
+                .unwrap_or_else(|_| "Unknown".to_string());
+            let address = format!("Address: http://{}:{}", ip, DEFAULT_PORT);
+
             // 设置系统托盘菜单
             let title_i = MenuItem::with_id(app, "title", "Remote Mouse", false, None::<&str>)?;
-            let status_i = MenuItem::with_id(app, "status", "Status: Running", false, None::<&str>)?;
+            let addr_i = MenuItem::with_id(app, "address", &address, false, None::<&str>)?;
+
+            // 开机自启
+            let is_autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
+            let autostart_i = CheckMenuItem::with_id(
+                app,
+                "toggle_autostart",
+                "Auto-start",
+                true,
+                is_autostart_enabled,
+                None::<&str>,
+            )?;
+
+            // 检查更新
+            let update_i = MenuItem::with_id(app, "check_update", "Check for updates", true, None::<&str>)?;
+
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
 
-            let menu = Menu::with_items(app, &[&title_i, &separator, &status_i, &separator, &quit_i])?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &title_i,
+                    &separator,
+                    &addr_i,
+                    &separator,
+                    &autostart_i,
+                    &update_i,
+                    &separator,
+                    &quit_i,
+                ],
+            )?;
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app, event| match event.id.as_ref() {
+                    "toggle_autostart" => {
+                        let manager = app.autolaunch();
+                        if manager.is_enabled().unwrap_or(false) {
+                            let _ = manager.disable();
+                            info!("Autostart disabled");
+                        } else {
+                            let _ = manager.enable();
+                            info!("Autostart enabled");
+                        }
+                    }
+                    "check_update" => {
+                        let handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            info!("Checking for updates...");
+                            match handle.updater() {
+                                Ok(updater) => match updater.check().await {
+                                    Ok(Some(update)) => {
+                                        info!("Found update: {}", update.version);
+                                        let message = format!("Found new version {}, would you like to update and restart now?", update.version);
+                                        let answer = handle
+                                            .dialog()
+                                            .message(message)
+                                            .title("Check for update")
+                                            .kind(MessageDialogKind::Info)
+                                            .buttons(MessageDialogButtons::YesNo)
+                                            .blocking_show();
+
+                                        if answer {
+                                            info!("User confirmed update. Downloading...");
+                                            if let Err(e) = update.download_and_install(|_, _| {}, || {}).await {
+                                                error!("Failed to install update: {}", e);
+                                            } else {
+                                                info!("Update installed. Restarting...");
+                                                handle.restart();
+                                            }
+                                        }
+                                    }
+                                    Ok(None) => {
+                                        info!("No update found");
+                                        let _ = handle
+                                            .dialog()
+                                            .message("You are on the latest version.")
+                                            .title("Check for update")
+                                            .kind(MessageDialogKind::Info)
+                                            .buttons(MessageDialogButtons::Ok)
+                                            .blocking_show();
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to check for updates: {}", e);
+                                    }
+                                },
+                                Err(e) => {
+                                    error!("Failed to get updater: {}", e);
+                                }
+                            }
+                        });
+                    }
                     "quit" => {
                         app.exit(0);
                     }
@@ -62,13 +162,13 @@ fn main() {
 
                 runtime.block_on(async {
                     // 启动 mDNS
-                    let mdns = MDNSResponder::new(9997);
+                    let mdns = MDNSResponder::new(DEFAULT_PORT);
                     if let Err(e) = mdns.start() {
                         error!("mDNS failed: {}", e);
                     }
 
                     // 启动 Web 服务
-                    let web = WebService::new(9997, tx);
+                    let web = WebService::new(DEFAULT_PORT, tx);
                     if let Err(e) = web.start().await {
                         error!("Web service failed: {}", e);
                     }

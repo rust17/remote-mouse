@@ -39,10 +39,15 @@ jobs:
 
     - name: Build Tauri App
       working-directory: ./server
+      env:
+        TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       run: cargo tauri build
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: RemoteMouse-macos
-        path: server/target/release/bundle/dmg/*.dmg
+        path: |
+          server/target/release/bundle/dmg/*.dmg
+          server/target/release/bundle/macos/*.tar.gz*
