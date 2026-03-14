@@ -1,17 +1,21 @@
-use enigo::{
-    Axis, Button, Direction, Enigo, Key, Keyboard, Mouse, Settings,
-};
+use enigo::{Axis, Button, Direction, Enigo, Key, Keyboard, Mouse, Settings};
 use std::error::Error;
 use tracing::error;
 
 pub struct InputService {
     enigo: Enigo,
+    scroll_remainder_x: f32,
+    scroll_remainder_y: f32,
 }
 
 impl InputService {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let enigo = Enigo::new(&Settings::default())?;
-        Ok(Self { enigo })
+        Ok(Self {
+            enigo,
+            scroll_remainder_x: 0.0,
+            scroll_remainder_y: 0.0,
+        })
     }
 
     // --- Mouse Controller ---
@@ -39,21 +43,36 @@ impl InputService {
     }
 
     pub fn mouse_scroll(&mut self, dx: i32, dy: i32) {
+        // 降低滚动灵敏度并保留小数部分
+        let tx = dx as f32 * 0.3 + self.scroll_remainder_x;
+        let ty = dy as f32 * 0.3 + self.scroll_remainder_y;
+
+        let ix = tx.trunc();
+        let iy = ty.trunc();
+
+        self.scroll_remainder_x = tx - ix;
+        self.scroll_remainder_y = ty - iy;
+
         // Enigo 0.3.0 使用 Axis 枚举
-        if dy != 0 {
-            if let Err(e) = self.enigo.scroll(dy, Axis::Vertical) {
+        if iy != 0.0 {
+            // 反转方向
+            if let Err(e) = self.enigo.scroll(-(iy as i32), Axis::Vertical) {
                 error!("Vertical scroll failed: {:?}", e);
             }
         }
-        if dx != 0 {
-            if let Err(e) = self.enigo.scroll(dx, Axis::Horizontal) {
+        if ix != 0.0 {
+            if let Err(e) = self.enigo.scroll(ix as i32, Axis::Horizontal) {
                 error!("Horizontal scroll failed: {:?}", e);
             }
         }
     }
 
     pub fn mouse_set_drag(&mut self, down: bool) {
-        let direction = if down { Direction::Press } else { Direction::Release };
+        let direction = if down {
+            Direction::Press
+        } else {
+            Direction::Release
+        };
         if let Err(e) = self.enigo.button(Button::Left, direction) {
             error!("Mouse drag state change failed: {:?}", e);
         }
@@ -119,9 +138,13 @@ impl InputService {
             "alt" | "option" => Some(Key::Alt),
             "win" | "command" | "meta" => {
                 #[cfg(target_os = "macos")]
-                { Some(Key::Meta) }
+                {
+                    Some(Key::Meta)
+                }
                 #[cfg(not(target_os = "macos"))]
-                { Some(Key::Meta) } // Enigo 会根据平台处理 Meta
+                {
+                    Some(Key::Meta)
+                } // Enigo 会根据平台处理 Meta
             }
             _ => None,
         }

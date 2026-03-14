@@ -4,14 +4,18 @@ use tracing::{error, info};
 
 pub struct MDNSResponder {
     port: u16,
+    _daemon: Option<ServiceDaemon>,
 }
 
 impl MDNSResponder {
     pub fn new(port: u16) -> Self {
-        Self { port }
+        Self {
+            port,
+            _daemon: None,
+        }
     }
 
-    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mdns = ServiceDaemon::new()?;
         let service_type = "_http._tcp.local.";
         let instance_name = "Remote Mouse Service";
@@ -27,7 +31,10 @@ impl MDNSResponder {
             }
         };
 
-        info!("Registering mDNS service at {}:{}", ip, port);
+        info!(
+            "Registering mDNS service [{}] at {}:{} (host: {})",
+            instance_name, ip, port, host_name
+        );
 
         let properties = HashMap::new();
         let service_info = ServiceInfo::new(
@@ -40,8 +47,8 @@ impl MDNSResponder {
         )?;
 
         mdns.register(service_info)?;
-        
-        // 保持 daemon 运行（mdns-sd 内部有自己的线程）
+
+        self._daemon = Some(mdns);
         Ok(())
     }
 }

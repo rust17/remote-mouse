@@ -162,7 +162,7 @@ fn main() {
 
                 runtime.block_on(async {
                     // 启动 mDNS
-                    let mdns = MDNSResponder::new(DEFAULT_PORT);
+                    let mut mdns = MDNSResponder::new(DEFAULT_PORT);
                     if let Err(e) = mdns.start() {
                         error!("mDNS failed: {}", e);
                     }
@@ -186,30 +186,7 @@ fn main() {
                 };
 
                 info!("Input worker started");
-                while let Some(mut cmd) = rx.blocking_recv() {
-                    // --- 合并连续的移动指令以减少延迟 ---
-                    if let ProtocolCommand::Move { mut dx, mut dy } = cmd {
-                        while let Ok(next_cmd) = rx.try_recv() {
-                            match next_cmd {
-                                ProtocolCommand::Move { dx: ndx, dy: ndy } => {
-                                    dx += ndx;
-                                    dy += ndy;
-                                }
-                                _ => {
-                                    // 遇到非移动指令，先处理当前的合并移动，再处理该指令
-                                    input_service.mouse_move_relative(dx as i32, dy as i32);
-                                    cmd = next_cmd;
-                                    break;
-                                }
-                            }
-                        }
-                        // 如果因为队列空或遇到非 Move 指令而退出
-                        if let ProtocolCommand::Move { .. } = cmd {
-                            input_service.mouse_move_relative(dx as i32, dy as i32);
-                            continue;
-                        }
-                    }
-
+                while let Some(cmd) = rx.blocking_recv() {
                     match cmd {
                         ProtocolCommand::Move { dx, dy } => {
                             input_service.mouse_move_relative(dx as i32, dy as i32);
