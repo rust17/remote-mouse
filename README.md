@@ -25,7 +25,7 @@ Remote Mouse is a lightweight, low-latency remote control tool that transforms y
 - **Modern UI**: Dark mode interface with a sleek, translucent design.
 - **Cross-Platform**: Server runs on Python, client works in any modern mobile browser.
 
-### Download & Run (For Users)
+### Download & Run
 
 Get the latest version from the [Releases](https://github.com/rust17/remote-mouse/releases) page.
 
@@ -44,30 +44,6 @@ Get the latest version from the [Releases](https://github.com/rust17/remote-mous
 4. **Grant Permissions**: Go to `System Settings` > `Privacy & Security` > `Accessibility` and add/enable `RemoteMouse`. Without this, the server cannot move the cursor.
 
 ---
-
-### Development
-
-#### Tech Stack
-- **Server**: Python 3.12+, FastAPI, PyAutoGUI, Zeroconf, uv
-- **Web Client**: TypeScript, Vite, PWA
-
-#### Setup
-**1. Server**
-```bash
-cd server
-uv sync
-uv run python -m server.main
-```
-
-**2. Web Client**
-```bash
-cd web-client
-npm install
-npm run build
-# The client is served by the Python server automatically.
-# For dev mode with hot-reload:
-npm run dev
-```
 
 ### Usage
 1. Start the server on your computer.
