@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.0.5] - 2026-03-15
+
+### Added
+- **Server**: Added real-time rate monitoring (Packets Per Second and Bytes Per Second) to the system tray icon.
+- **Server**: Added a "Show Rate" toggle to the system tray menu for real-time performance tracking.
+- **Server**: Implemented dynamic tray icon rendering with text overlay and automatic font fallback for cross-platform compatibility.
+- **Docs**: Added `AGENTS.md` to provide specialized instructions for AI coding assistants.
+
+### Fixed
+- **Server**: Resolved mDNS service name conflicts when running multiple instances in development environments.
+- **Web Client**: Improved connection status display and transport layer metrics collection.
+
+# [v1.0.4] - 2026-03-14
+
+### Fixed
+- **Server**: Resolved a critical 404 error affecting long-term application uptime by ensuring static files are correctly persisted and served from the application package.
+
 # [v1.0.3] - 2026-01-18
 
 ### Added
