@@ -17,6 +17,11 @@ TRAY_ICON_BG_COLOR = "blue"
 TRAY_ICON_FG_COLOR = "white"
 
 
+def is_dev() -> bool:
+    """判断是否为开发环境。"""
+    return not getattr(sys, "frozen", False)
+
+
 def get_share_dir() -> Path:
     share_dir = Path.home() / APP_DIR_NAME
     share_dir.mkdir(parents=True, exist_ok=True)
@@ -25,13 +30,13 @@ def get_share_dir() -> Path:
 
 def get_static_dir() -> Path:
     # 1. PyInstaller environment
-    if getattr(sys, "frozen", False):
+    if not is_dev():
         bundle_dir = Path(sys._MEIPASS)
         source_static = bundle_dir / "web_dist"
-        
+
         # Target: ~/.remote-mouse/web_dist (Persistent storage to avoid /tmp cleanup)
         target_static = get_share_dir() / "web_dist"
-        
+
         try:
             # Sync files to persistent directory
             if target_static.exists():
@@ -53,7 +58,7 @@ def get_static_dir() -> Path:
 
 
 def get_asset_path(filename: str) -> Path:
-    if getattr(sys, "frozen", False):
+    if not is_dev():
         bundle_dir = Path(sys._MEIPASS)
         asset_path = bundle_dir / "assets" / filename
     else:

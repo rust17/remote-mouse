@@ -4,6 +4,8 @@ from loguru import logger
 
 from server.core.protocol import process_binary_command
 from server.config import get_static_dir
+from server.core.metrics import metrics
+from server.ui.tray_icon import TrayIcon
 
 
 def create_app() -> FastAPI:
@@ -13,6 +15,12 @@ def create_app() -> FastAPI:
     if not static_dir.exists():
         logger.warning(f"Static directory {static_dir} does not exist!")
 
+    @app.post("/api/settings/tray/rate")
+    async def toggle_server_rate(enabled: bool):
+        if TrayIcon.instance:
+            TrayIcon.instance.set_show_rate(enabled)
+        return {"status": "ok"}
+
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
@@ -20,6 +28,7 @@ def create_app() -> FastAPI:
         try:
             while True:
                 data = await websocket.receive_bytes()
+                metrics.add(len(data))
                 process_binary_command(data)
         except WebSocketDisconnect:
             logger.info("WebSocket client disconnected")

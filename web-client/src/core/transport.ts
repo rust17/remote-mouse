@@ -10,8 +10,20 @@ export class Transport {
     private reconnectTimer: number | null = null;
     private isExplicitlyClosed = false;
 
+    private metrics = {
+        packetsSent: 0,
+        bytesSent: 0
+    };
+
     constructor(options: TransportOptions) {
         this.options = options;
+    }
+
+    public getMetrics() {
+        const result = { ...this.metrics };
+        this.metrics.packetsSent = 0;
+        this.metrics.bytesSent = 0;
+        return result;
     }
 
     public connect(url: string) {
@@ -60,6 +72,8 @@ export class Transport {
     public send(data: ArrayBuffer | Uint8Array) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(data);
+            this.metrics.packetsSent++;
+            this.metrics.bytesSent += data.byteLength;
         }
     }
 

@@ -102,8 +102,23 @@
                 </label>
               </div>
             </div>
+
+            <div class="setting-item">
+              <div class="setting-label" style="align-items: center;">
+                <span>Rate Monitor</span>
+                <label class="switch">
+                    <input type="checkbox" id="rate-monitor-toggle">
+                    <span class="slider"></span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div id="rate-monitor" class="hidden">
+        <div>PPS: <span id="rate-pps">0</span></div>
+        <div>BPS: <span id="rate-bps">0</span></div>
       </div>
 
       <textarea id="keyboard-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
