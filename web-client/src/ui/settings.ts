@@ -8,9 +8,11 @@ export class SettingsManager {
     private scrollSensitivityLabel: HTMLElement;
     private themeToggle: HTMLInputElement;
     private scrollPosToggle: HTMLInputElement;
+    private rateMonitorToggle: HTMLInputElement;
 
     private onSensitivityChange: (val: number) => void;
     private onScrollSensitivityChange: (val: number) => void;
+    private onRateMonitorChange: (enabled: boolean) => void;
 
     constructor(
         modal: HTMLElement,
@@ -22,8 +24,10 @@ export class SettingsManager {
         scrollLabel: HTMLElement,
         themeToggle: HTMLInputElement,
         scrollPosToggle: HTMLInputElement,
+        rateMonitorToggle: HTMLInputElement,
         onSensitivityChange: (val: number) => void,
-        onScrollSensitivityChange: (val: number) => void
+        onScrollSensitivityChange: (val: number) => void,
+        onRateMonitorChange: (enabled: boolean) => void
     ) {
         this.modal = modal;
         this.openBtn = openBtn;
@@ -34,8 +38,10 @@ export class SettingsManager {
         this.scrollSensitivityLabel = scrollLabel;
         this.themeToggle = themeToggle;
         this.scrollPosToggle = scrollPosToggle;
+        this.rateMonitorToggle = rateMonitorToggle;
         this.onSensitivityChange = onSensitivityChange;
         this.onScrollSensitivityChange = onScrollSensitivityChange;
+        this.onRateMonitorChange = onRateMonitorChange;
 
         this.init();
     }
@@ -71,6 +77,13 @@ export class SettingsManager {
         if (savedScrollPos === 'right') {
             document.body.classList.add('scroll-right');
             this.scrollPosToggle.checked = true;
+        }
+
+        // Load saved rate monitor
+        const savedRateMonitor = localStorage.getItem('remote-mouse-rate-monitor');
+        if (savedRateMonitor === 'true') {
+            this.rateMonitorToggle.checked = true;
+            this.onRateMonitorChange(true);
         }
 
         // Events
@@ -126,6 +139,12 @@ export class SettingsManager {
                 document.body.classList.remove('scroll-right');
                 localStorage.setItem('remote-mouse-scroll-pos', 'left');
             }
+        });
+
+        this.rateMonitorToggle.addEventListener('change', () => {
+            const enabled = this.rateMonitorToggle.checked;
+            localStorage.setItem('remote-mouse-rate-monitor', enabled.toString());
+            this.onRateMonitorChange(enabled);
         });
     }
 }

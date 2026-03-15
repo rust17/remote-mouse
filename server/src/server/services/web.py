@@ -4,6 +4,7 @@ from loguru import logger
 
 from server.core.protocol import process_binary_command
 from server.config import get_static_dir
+from server.core.metrics import metrics
 
 
 def create_app() -> FastAPI:
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
         try:
             while True:
                 data = await websocket.receive_bytes()
+                metrics.add(len(data))
                 process_binary_command(data)
         except WebSocketDisconnect:
             logger.info("WebSocket client disconnected")

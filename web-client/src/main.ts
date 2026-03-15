@@ -16,6 +16,7 @@ class RemoteMouseApp {
     private statusBar: StatusBar;
     private moveBuffer = new ArrayBuffer(5);
     private moveView = new DataView(this.moveBuffer);
+    private rateMonitorTimer: number | null = null;
 
     constructor() {
         // 1. UI Elements
@@ -62,6 +63,10 @@ class RemoteMouseApp {
         );
 
         // 6. Settings
+        const rateMonitorEl = document.getElementById('rate-monitor')!;
+        const ratePpsEl = document.getElementById('rate-pps')!;
+        const rateBpsEl = document.getElementById('rate-bps')!;
+
         new SettingsManager(
             document.getElementById('settings-modal')!,
             document.getElementById('btn-settings')!,
@@ -72,10 +77,29 @@ class RemoteMouseApp {
             document.getElementById('scroll-sensitivity-value')!,
             document.getElementById('theme-toggle')! as HTMLInputElement,
             document.getElementById('scroll-pos-toggle')! as HTMLInputElement,
+            document.getElementById('rate-monitor-toggle')! as HTMLInputElement,
             (val) => this.touchpad.setSensitivity(val),
             (val) => {
                 this.touchpad.setScrollSensitivity(val);
                 this.scrollStrip.setSensitivity(val);
+            },
+            (enabled) => {
+                if (enabled) {
+                    rateMonitorEl.classList.remove('hidden');
+                    if (!this.rateMonitorTimer) {
+                        this.rateMonitorTimer = window.setInterval(() => {
+                            const { packetsSent, bytesSent } = this.transport.getMetrics();
+                            ratePpsEl.textContent = packetsSent.toString();
+                            rateBpsEl.textContent = this.formatBytes(bytesSent);
+                        }, 1000);
+                    }
+                } else {
+                    rateMonitorEl.classList.add('hidden');
+                    if (this.rateMonitorTimer) {
+                        clearInterval(this.rateMonitorTimer);
+                        this.rateMonitorTimer = null;
+                    }
+                }
             }
         );
 
@@ -83,17 +107,20 @@ class RemoteMouseApp {
         this.transport.connect(url);
 
         // Handle touchpad/keyboard interaction
-        // If keyboard is open, and touchpad is clicked, maybe close keyboard?
-        // The original logic had: "touchpad pointerdown -> if keyboard open -> close it".
-        // TouchpadHandler exposes logic, but doesn't expose "onPointerDown".
-        // We can add a simple global listener or modify TouchpadHandler.
-        // For now, let's attach a simple listener to the touchpad element here for that specific interaction
-        // to avoid coupling TouchpadHandler to Keyboard logic.
         document.getElementById('touchpad')!.addEventListener('pointerdown', () => {
             if (this.keyboard.isOpenState()) {
                 this.keyboard.toggle(false);
             }
         });
+    }
+
+    private formatBytes(bytes: number): string {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB/s', 'MB/s'];
+        const i = bytes > 0 ? Math.floor(Math.log(bytes) / Math.log(k)) : 0;
+        const val = parseFloat((bytes / Math.pow(k, i)).toFixed(1));
+        return val + ' ' + (i === 0 ? 'B' : sizes[i]);
     }
 
     // --- Encoding Helpers ---
@@ -115,19 +142,6 @@ class RemoteMouseApp {
         view.setUint8(2, mask);
         this.transport.send(buffer);
 
-        // If mask was used, we might want to reset it?
-        // Original code: if (mask !== 0) this.resetModifiers();
-        // But resetModifiers is private in KeyboardHandler.
-        // The KeyboardHandler only resets modifiers on KeyAction or Manual Toggle.
-        // Original code logic:
-        // sendClick: if (mask !== 0) { this.resetModifiers(); }
-        // sendKeyAction: if (mask !== 0) { this.resetModifiers(); }
-
-        // Current KeyboardHandler implementation ONLY resets on sendKeyAction (inside input/keyboard.ts).
-        // It does NOT expose a public resetModifiers().
-        // For Clicks, if I Ctrl+Click, usually I expect Ctrl to be consumed?
-        // Yes. So I should probably expose `resetModifiers` too, or make `getActiveModifiers` optionally consume them.
-        // Let's call a new method `consumeModifiers()` on KeyboardHandler.
         if (mask !== 0) {
              this.keyboard.resetModifiers();
         }

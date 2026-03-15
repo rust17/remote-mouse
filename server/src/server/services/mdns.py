@@ -2,7 +2,7 @@ import socket
 from zeroconf import IPVersion, ServiceInfo, Zeroconf
 from loguru import logger
 
-from server.config import APP_NAME, DEFAULT_PORT, MDNS_HOSTNAME
+from server.config import APP_NAME, DEFAULT_PORT, MDNS_HOSTNAME, is_dev
 
 
 class MDNSResponder:
@@ -12,8 +12,19 @@ class MDNSResponder:
 
     def __init__(self, service_name=APP_NAME, port=DEFAULT_PORT, hostname=MDNS_HOSTNAME):
         self.zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
-        self.service_name_base = service_name
-        self.hostname = hostname
+        
+        if is_dev():
+            # Get only the first part of the hostname (e.g. "my-mac" from "my-mac.local")
+            machine_name = socket.gethostname().split('.')[0]
+            self.service_name_base = f"{service_name} ({machine_name})"
+            
+            # Strip ".local." or ".local" from the base hostname and append machine name
+            base = hostname.replace(".local.", "").replace(".local", "").strip(".")
+            self.hostname = f"{base}-{machine_name}.local."
+        else:
+            self.service_name_base = service_name
+            self.hostname = hostname
+            
         self.port = port
         self.service_info = None
 
@@ -27,8 +38,6 @@ class MDNSResponder:
 
     def register(self):
         # mDNS 规范要求主机名以 .local. 结尾
-        # 用户直接输入 remote-mouse.local 需要该域名解析到 IP
-
         local_ip = self.get_local_ip()
         logger.info(f"Detected Local IP: {local_ip}")
 
