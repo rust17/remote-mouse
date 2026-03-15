@@ -105,8 +105,8 @@ def test_run_constructs_ui_correctly(mock_tray_deps):
     mock_deps["image"].open.assert_called_once()
 
     # 2. Verify Menu Construction
-    # We expect 5 MenuItems: Address Info, Rate Toggle, Log Toggle, Restart, Exit
-    assert mock_deps["pystray"].MenuItem.call_count == 5
+    # We expect 4 MenuItems: Address Info, Log Toggle, Restart, Exit
+    assert mock_deps["pystray"].MenuItem.call_count == 4
 
     # Inspect the calls
     calls = mock_deps["pystray"].MenuItem.call_args_list
@@ -120,7 +120,6 @@ def test_run_constructs_ui_correctly(mock_tray_deps):
             labels.append(str(arg))
 
     assert "Enable Logs" in labels  # Default is False
-    assert "Show Rate" in labels    # Default is False
     assert "Restart" in labels
     assert "Exit" in labels
     assert any("9999" in label for label in labels)

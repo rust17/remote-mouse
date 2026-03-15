@@ -84,6 +84,7 @@ class RemoteMouseApp {
                 this.scrollStrip.setSensitivity(val);
             },
             (enabled) => {
+                // Client-side rate monitor
                 if (enabled) {
                     rateMonitorEl.classList.remove('hidden');
                     if (!this.rateMonitorTimer) {
@@ -100,6 +101,11 @@ class RemoteMouseApp {
                         this.rateMonitorTimer = null;
                     }
                 }
+                
+                // Server-side tray rate
+                fetch(`/api/settings/tray/rate?enabled=${enabled ? 'true' : 'false'}`, {
+                    method: 'POST'
+                }).catch(e => console.error('Failed to update server tray rate', e));
             }
         );
 

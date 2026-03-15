@@ -19,6 +19,8 @@ def create_image() -> Image.Image:
 class TrayIcon:
     """System tray icon manager with real-time metrics display."""
 
+    instance = None
+
     def __init__(
         self,
         port: int,
@@ -28,6 +30,7 @@ class TrayIcon:
         on_log_toggle_callback: Callable[[bool], None],
         initial_logging_state: bool = False,
     ):
+        TrayIcon.instance = self
         self.port = port
         self.ip_address = ip_address
         self.on_exit_callback = on_exit_callback
@@ -54,9 +57,14 @@ class TrayIcon:
     def _load_best_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         """Attempt to load a system font, falling back to default."""
         font_names = [
-            "arial.ttf", "consola.ttf", "msyh.ttc",  # Windows
-            "Arial.ttf", "Menlo.ttc", "Courier.dfont",  # macOS
-            "DejaVuSans.ttf", "FreeSans.ttf",  # Linux
+            "arial.ttf",
+            "consola.ttf",
+            "msyh.ttc",  # Windows
+            "Arial.ttf",
+            "Menlo.ttc",
+            "Courier.dfont",  # macOS
+            "DejaVuSans.ttf",
+            "FreeSans.ttf",  # Linux
         ]
         for name in font_names:
             try:
@@ -83,8 +91,10 @@ class TrayIcon:
         if self.on_log_toggle_callback:
             self.on_log_toggle_callback(self.logging_enabled)
 
-    def _on_toggle_rate(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
-        self.show_rate = not self.show_rate
+    def set_show_rate(self, enabled: bool) -> None:
+        if self.show_rate == enabled:
+            return
+        self.show_rate = enabled
         logger.info(f"Tray toggled rate display to {self.show_rate}")
 
         if self.show_rate:
@@ -169,10 +179,6 @@ class TrayIcon:
                 f"Address: http://{self.ip_address}:{self.port}",
                 lambda: None,
                 enabled=False,
-            ),
-            pystray.MenuItem(
-                lambda _: "Hide Rate" if self.show_rate else "Show Rate",
-                self._on_toggle_rate,
             ),
             pystray.MenuItem(
                 lambda _: "Disable Logs" if self.logging_enabled else "Enable Logs",
