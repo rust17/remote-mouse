@@ -46,6 +46,9 @@ def mock_tray_deps():
         mock_icon_instance = MagicMock()
         mock_pystray.Icon.return_value = mock_icon_instance
 
+        # Setup mock image size
+        mock_image.open.return_value.size = (64, 64)
+
         yield {
             "pystray": mock_pystray,
             "image": mock_image,
