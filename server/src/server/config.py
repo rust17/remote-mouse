@@ -33,10 +33,10 @@ def get_static_dir() -> Path:
     if not is_dev():
         bundle_dir = Path(sys._MEIPASS)
         source_static = bundle_dir / "web_dist"
-        
+
         # Target: ~/.remote-mouse/web_dist (Persistent storage to avoid /tmp cleanup)
         target_static = get_share_dir() / "web_dist"
-        
+
         try:
             # Sync files to persistent directory
             if target_static.exists():

@@ -12,19 +12,19 @@ class MDNSResponder:
 
     def __init__(self, service_name=APP_NAME, port=DEFAULT_PORT, hostname=MDNS_HOSTNAME):
         self.zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
-        
+
         if is_dev():
             # Get only the first part of the hostname (e.g. "my-mac" from "my-mac.local")
-            machine_name = socket.gethostname().split('.')[0]
+            machine_name = socket.gethostname().split(".")[0]
             self.service_name_base = f"{service_name} ({machine_name})"
-            
+
             # Strip ".local." or ".local" from the base hostname and append machine name
             base = hostname.replace(".local.", "").replace(".local", "").strip(".")
             self.hostname = f"{base}-{machine_name}.local."
         else:
             self.service_name_base = service_name
             self.hostname = hostname
-            
+
         self.port = port
         self.service_info = None
 

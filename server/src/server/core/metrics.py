@@ -1,6 +1,7 @@
 import time
 from threading import Lock
 
+
 class Metrics:
     def __init__(self):
         self.packets_count = 0
@@ -34,5 +35,6 @@ class Metrics:
         with self._lock:
             self._update_if_needed()
             return self._current_pps, self._current_bps
+
 
 metrics = Metrics()

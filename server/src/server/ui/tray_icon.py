@@ -102,9 +102,9 @@ class TrayIcon:
         if bps < 1024:
             return f"{bps} B/s"
         elif bps < 1024 * 1024:
-            return f"{bps/1024:.1f} KB/s"
+            return f"{bps / 1024:.1f} KB/s"
         else:
-            return f"{bps/1024/1024:.1f} MB/s"
+            return f"{bps / 1024 / 1024:.1f} MB/s"
 
     def stop(self):
         self._stop_event.set()
