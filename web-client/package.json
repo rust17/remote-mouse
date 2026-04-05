@@ -15,5 +15,8 @@
     "vite": "^7.2.4",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.16"
+  },
+  "dependencies": {
+    "web-haptics": "^0.0.6"
   }
 }

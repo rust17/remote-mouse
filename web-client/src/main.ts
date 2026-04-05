@@ -7,6 +7,7 @@ import { ScrollStripHandler } from './input/scroll-strip';
 import { KeyboardHandler } from './input/keyboard';
 import { StatusBar } from './ui/status-bar';
 import { SettingsManager } from './ui/settings';
+import { WebHaptics } from 'web-haptics';
 
 class RemoteMouseApp {
     private transport: Transport;
@@ -14,6 +15,7 @@ class RemoteMouseApp {
     private scrollStrip: ScrollStripHandler;
     private keyboard: KeyboardHandler;
     private statusBar: StatusBar;
+    private haptics = new WebHaptics();
     private moveBuffer = new ArrayBuffer(5);
     private moveView = new DataView(this.moveBuffer);
     private rateMonitorTimer: number | null = null;
@@ -59,7 +61,8 @@ class RemoteMouseApp {
             {
                 onText: (text) => this.sendText(text),
                 onKeyAction: (key, modifierMask) => this.sendKeyAction(key, modifierMask)
-            }
+            },
+            this.haptics
         );
 
         // 6. Settings
@@ -101,7 +104,7 @@ class RemoteMouseApp {
                         this.rateMonitorTimer = null;
                     }
                 }
-                
+
                 // Server-side tray rate
                 fetch(`/api/settings/tray/rate?enabled=${enabled ? 'true' : 'false'}`, {
                     method: 'POST'
@@ -116,6 +119,14 @@ class RemoteMouseApp {
         document.getElementById('touchpad')!.addEventListener('pointerdown', () => {
             if (this.keyboard.isOpenState()) {
                 this.keyboard.toggle(false);
+            }
+        });
+
+        // Global haptic feedback for buttons and interactive inputs
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('button') || target.closest('input[type="checkbox"]') || target.closest('input[type="range"]')) {
+                this.haptics.trigger('light');
             }
         });
     }
@@ -139,6 +150,7 @@ class RemoteMouseApp {
     }
 
     private sendClick(button: number) {
+        this.haptics.trigger('medium');
         // [OpCode] [Button] [ModifierMask]
         const mask = this.keyboard.getActiveModifiers();
         const buffer = new ArrayBuffer(3);

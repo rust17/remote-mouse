@@ -1,3 +1,5 @@
+import { WebHaptics } from 'web-haptics';
+
 interface KeyboardCallbacks {
     onText: (text: string) => void;
     onKeyAction: (key: string, modifierMask?: number) => void;
@@ -8,6 +10,7 @@ export class KeyboardHandler {
     private toggleBtn: HTMLElement;
     private fnPanelEl: HTMLElement;
     private callbacks: KeyboardCallbacks;
+    private haptics: WebHaptics;
 
     private isComposing = false;
     private isOpen = false;
@@ -17,12 +20,14 @@ export class KeyboardHandler {
         inputEl: HTMLTextAreaElement,
         toggleBtn: HTMLElement,
         fnPanelEl: HTMLElement,
-        callbacks: KeyboardCallbacks
+        callbacks: KeyboardCallbacks,
+        haptics: WebHaptics
     ) {
         this.inputEl = inputEl;
         this.toggleBtn = toggleBtn;
         this.fnPanelEl = fnPanelEl;
         this.callbacks = callbacks;
+        this.haptics = haptics;
 
         this.initListeners();
         this.initFnKeys();
@@ -30,6 +35,7 @@ export class KeyboardHandler {
 
     public toggle(show?: boolean) {
         this.isOpen = show !== undefined ? show : !this.isOpen;
+        this.haptics.trigger('light');
         if (this.isOpen) {
             this.inputEl.focus();
             this.toggleBtn.classList.add('active');
