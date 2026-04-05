@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.0] - 2026-04-06
+
+### Added
+- **Web Client**: Implemented internationalization (i18n) support with Chinese and English translations.
+- **Web Client**: Integrated haptic feedback using `web-haptics` for button interactions and slider adjustments.
+- **Web Client**: Added visual click feedback for non-modifier functional keys.
+
+### Changed
+- **Web Client**: Optimized iOS compatibility and keyboard layout, ensuring functional keys remain accessible when the system keyboard is open.
+- **Web Client**: Refactored theme switching to apply classes to the root `<html>` element for improved CSS targeting.
+- **Web Client**: Refactored `ConnectionStatus` to use constant objects for better type safety.
+
+### Fixed
+- **Web Client**: Fixed UI glitches in FAB (Floating Action Button) positioning relative to the function panel.
+
 # [v1.0.5] - 2026-03-15
 
 ### Added
