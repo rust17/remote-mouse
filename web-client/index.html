@@ -14,7 +14,7 @@
       <div id="status-bar">
         <div id="status-indicator">
           <div class="status-dot"></div>
-          <span class="status-text">Connecting...</span>
+          <span class="status-text" data-i18n="status.connecting">Connecting...</span>
         </div>
       </div>
 
@@ -61,7 +61,7 @@
       <div id="settings-modal" class="modal hidden">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>Settings</h3>
+            <h3 data-i18n="settings.title">Settings</h3>
             <button id="btn-close-settings" class="icon-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -69,7 +69,7 @@
           <div class="modal-body">
             <div class="setting-item">
               <div class="setting-label">
-                <span>Mouse Sensitivity</span>
+                <span data-i18n="settings.mouse_sensitivity">Mouse Sensitivity</span>
                 <span id="sensitivity-value">2.0</span>
               </div>
               <input type="range" id="sensitivity-slider" min="0.5" max="10.0" step="0.1" value="2.0">
@@ -77,7 +77,7 @@
 
             <div class="setting-item">
               <div class="setting-label">
-                <span>Scroll Sensitivity</span>
+                <span data-i18n="settings.scroll_sensitivity">Scroll Sensitivity</span>
                 <span id="scroll-sensitivity-value">1.0</span>
               </div>
               <input type="range" id="scroll-sensitivity-slider" min="0.1" max="10.0" step="0.1" value="1.0">
@@ -85,7 +85,7 @@
 
             <div class="setting-item">
               <div class="setting-label" style="align-items: center;">
-                <span>Light Mode</span>
+                <span data-i18n="settings.light_mode">Light Mode</span>
                 <label class="switch">
                     <input type="checkbox" id="theme-toggle">
                     <span class="slider"></span>
@@ -95,7 +95,7 @@
 
             <div class="setting-item">
               <div class="setting-label" style="align-items: center;">
-                <span>Scroll Bar Right</span>
+                <span data-i18n="settings.scroll_bar_right">Scroll Bar Right</span>
                 <label class="switch">
                     <input type="checkbox" id="scroll-pos-toggle">
                     <span class="slider"></span>
@@ -105,11 +105,21 @@
 
             <div class="setting-item">
               <div class="setting-label" style="align-items: center;">
-                <span>Rate Monitor</span>
+                <span data-i18n="settings.rate_monitor">Rate Monitor</span>
                 <label class="switch">
                     <input type="checkbox" id="rate-monitor-toggle">
                     <span class="slider"></span>
                 </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-label" style="align-items: center;">
+                <span data-i18n="settings.language">Language</span>
+                <select id="lang-select">
+                  <option value="zh">中文</option>
+                  <option value="en">English</option>
+                </select>
               </div>
             </div>
           </div>

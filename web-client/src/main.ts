@@ -81,6 +81,7 @@ class RemoteMouseApp {
             document.getElementById('theme-toggle')! as HTMLInputElement,
             document.getElementById('scroll-pos-toggle')! as HTMLInputElement,
             document.getElementById('rate-monitor-toggle')! as HTMLInputElement,
+            document.getElementById('lang-select')! as HTMLSelectElement,
             (val) => this.touchpad.setSensitivity(val),
             (val) => {
                 this.touchpad.setScrollSensitivity(val);

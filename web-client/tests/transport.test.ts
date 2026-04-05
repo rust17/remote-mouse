@@ -60,13 +60,13 @@ describe('Transport', () => {
     it('should connect and update state to connecting then connected', () => {
         transport.connect('ws://localhost/ws');
 
-        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Connecting, '正在连接...');
+        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Connecting, 'status.connecting');
         expect(MockWebSocket.instances.length).toBe(1);
 
         const ws = MockWebSocket.instances[0];
         ws.open(); // Simulate server accept
 
-        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Connected, '已连接');
+        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Connected, 'status.connected');
     });
 
     it('should attempt reconnect after 3 seconds on close', () => {
@@ -76,7 +76,7 @@ describe('Transport', () => {
 
         // Simulate close
         ws.terminate();
-        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Disconnected, '连接断开');
+        expect(onStateChange).toHaveBeenCalledWith(ConnectionStatus.Disconnected, 'status.disconnected');
 
         // Should not have reconnected yet
         expect(MockWebSocket.instances.length).toBe(1);
@@ -86,7 +86,7 @@ describe('Transport', () => {
 
         // Should have created a new connection
         expect(MockWebSocket.instances.length).toBe(2);
-        expect(onStateChange).toHaveBeenLastCalledWith(ConnectionStatus.Connecting, '正在连接...');
+        expect(onStateChange).toHaveBeenLastCalledWith(ConnectionStatus.Connecting, 'status.connecting');
     });
 
     it('should send data only when connected', () => {

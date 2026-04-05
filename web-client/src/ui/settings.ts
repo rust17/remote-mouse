@@ -1,3 +1,5 @@
+import { i18n } from '../core/i18n';
+
 export class SettingsManager {
     private modal: HTMLElement;
     private openBtn: HTMLElement;
@@ -9,6 +11,7 @@ export class SettingsManager {
     private themeToggle: HTMLInputElement;
     private scrollPosToggle: HTMLInputElement;
     private rateMonitorToggle: HTMLInputElement;
+    private langSelect: HTMLSelectElement;
 
     private onSensitivityChange: (val: number) => void;
     private onScrollSensitivityChange: (val: number) => void;
@@ -25,6 +28,7 @@ export class SettingsManager {
         themeToggle: HTMLInputElement,
         scrollPosToggle: HTMLInputElement,
         rateMonitorToggle: HTMLInputElement,
+        langSelect: HTMLSelectElement,
         onSensitivityChange: (val: number) => void,
         onScrollSensitivityChange: (val: number) => void,
         onRateMonitorChange: (enabled: boolean) => void
@@ -39,6 +43,7 @@ export class SettingsManager {
         this.themeToggle = themeToggle;
         this.scrollPosToggle = scrollPosToggle;
         this.rateMonitorToggle = rateMonitorToggle;
+        this.langSelect = langSelect;
         this.onSensitivityChange = onSensitivityChange;
         this.onScrollSensitivityChange = onScrollSensitivityChange;
         this.onRateMonitorChange = onRateMonitorChange;
@@ -47,6 +52,11 @@ export class SettingsManager {
     }
 
     private init() {
+        // Load saved language
+        const savedLang = i18n.getLanguage();
+        this.langSelect.value = savedLang;
+        i18n.updateDOM();
+
         // Load saved sensitivity
         const saved = localStorage.getItem('remote-mouse-sensitivity');
         if (saved) {
@@ -145,6 +155,10 @@ export class SettingsManager {
             const enabled = this.rateMonitorToggle.checked;
             localStorage.setItem('remote-mouse-rate-monitor', enabled.toString());
             this.onRateMonitorChange(enabled);
+        });
+
+        this.langSelect.addEventListener('change', () => {
+            i18n.setLanguage(this.langSelect.value as 'zh' | 'en');
         });
     }
 }

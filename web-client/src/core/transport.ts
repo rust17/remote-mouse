@@ -28,31 +28,31 @@ export class Transport {
 
     public connect(url: string) {
         this.isExplicitlyClosed = false;
-        this.updateState(ConnectionStatus.Connecting, '正在连接...');
+        this.updateState(ConnectionStatus.Connecting, 'status.connecting');
 
         try {
             this.ws = new WebSocket(url);
             this.ws.binaryType = 'arraybuffer';
 
             this.ws.onopen = () => {
-                this.updateState(ConnectionStatus.Connected, '已连接');
+                this.updateState(ConnectionStatus.Connected, 'status.connected');
                 console.log('WebSocket opened');
             };
 
             this.ws.onclose = () => {
-                this.updateState(ConnectionStatus.Disconnected, '连接断开');
+                this.updateState(ConnectionStatus.Disconnected, 'status.disconnected');
                 this.scheduleReconnect(url);
             };
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.updateState(ConnectionStatus.Disconnected, '连接错误');
+                this.updateState(ConnectionStatus.Disconnected, 'status.error');
                 // onerror usually is followed by onclose, so we let onclose handle reconnect
             };
 
         } catch (e) {
             console.error('Connection failed synchronously', e);
-            this.updateState(ConnectionStatus.Disconnected, '连接失败');
+            this.updateState(ConnectionStatus.Disconnected, 'status.failed');
             this.scheduleReconnect(url);
         }
     }
