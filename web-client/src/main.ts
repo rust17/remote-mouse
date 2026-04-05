@@ -29,8 +29,10 @@ class RemoteMouseApp {
                 // If viewport is significantly smaller than window height, keyboard is likely open
                 if (vh < window.innerHeight * 0.85) {
                     document.body.classList.add('keyboard-open');
+                    document.documentElement.classList.add('keyboard-open');
                 } else {
                     document.body.classList.remove('keyboard-open');
+                    document.documentElement.classList.remove('keyboard-open');
                 }
 
                 window.scrollTo(0, 0);

@@ -79,6 +79,7 @@ export class SettingsManager {
         const savedTheme = localStorage.getItem('remote-mouse-theme');
         if (savedTheme === 'light') {
             document.body.classList.add('light-mode');
+            document.documentElement.classList.add('light-mode');
             this.themeToggle.checked = true;
         }
 
@@ -134,9 +135,11 @@ export class SettingsManager {
         this.themeToggle.addEventListener('change', () => {
             if (this.themeToggle.checked) {
                 document.body.classList.add('light-mode');
+                document.documentElement.classList.add('light-mode');
                 localStorage.setItem('remote-mouse-theme', 'light');
             } else {
                 document.body.classList.remove('light-mode');
+                document.documentElement.classList.remove('light-mode');
                 localStorage.setItem('remote-mouse-theme', 'dark');
             }
         });
