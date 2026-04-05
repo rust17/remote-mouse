@@ -20,3 +20,8 @@ add:
 add:
     - 交互
         - [x] 增加震动反馈
+
+---
+
+edit:
+    - [x] 除了：ctrl、shift、alt、win，Modifiers 键盘增加点击效果，点击时，触发 active 效果，离开后消失

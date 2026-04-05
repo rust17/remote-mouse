@@ -248,7 +248,7 @@ body, html {
 }
 
 /* Modifier Toggle Active State */
-.fn-btn.modifier.active {
+.fn-btn.active {
   background: rgba(59, 130, 246, 0.25);
   border-color: var(--accent-color);
   color: #fff;

@@ -139,6 +139,29 @@ export class KeyboardHandler {
                 this.resetModifiers();
             }
         });
+
+        // Add visual click effect for non-modifier keys
+        this.fnPanelEl.addEventListener('pointerdown', (e) => {
+            const target = (e.target as HTMLElement).closest('.fn-btn');
+            if (target && !target.hasAttribute('data-modifier')) {
+                target.classList.add('active');
+            }
+        });
+
+        const clearActive = (e: PointerEvent) => {
+            const target = (e.target as HTMLElement).closest('.fn-btn');
+            if (target && !target.hasAttribute('data-modifier')) {
+                // Only remove if we're not moving into another child of the same button
+                if (e.type === 'pointerout' && e.relatedTarget) {
+                    if ((e.relatedTarget as HTMLElement).closest('.fn-btn') === target) return;
+                }
+                target.classList.remove('active');
+            }
+        };
+
+        this.fnPanelEl.addEventListener('pointerup', clearActive);
+        this.fnPanelEl.addEventListener('pointerout', clearActive);
+        this.fnPanelEl.addEventListener('pointercancel', clearActive);
     }
 
     public resetModifiers() {
