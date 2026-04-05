@@ -25,3 +25,4 @@ add:
 
 edit:
     - [x] 除了：ctrl、shift、alt、win，Modifiers 键盘增加点击效果，点击时，触发 active 效果，离开后消失
+    - [x] 当系统键盘呼出时，改成把 Modifiers 区域顶上去，使得可以同时操作 Modifiers 和键盘，同时取消掉图里有☑️这一行

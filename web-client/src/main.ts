@@ -21,6 +21,24 @@ class RemoteMouseApp {
     private rateMonitorTimer: number | null = null;
 
     constructor() {
+        if (window.visualViewport) {
+            const updateViewport = () => {
+                const vh = window.visualViewport!.height;
+                document.body.style.height = `${vh}px`;
+
+                // If viewport is significantly smaller than window height, keyboard is likely open
+                if (vh < window.innerHeight * 0.85) {
+                    document.body.classList.add('keyboard-open');
+                } else {
+                    document.body.classList.remove('keyboard-open');
+                }
+
+                window.scrollTo(0, 0);
+            };
+            window.visualViewport.addEventListener('resize', updateViewport);
+            updateViewport();
+        }
+
         // 1. UI Elements
         this.statusBar = new StatusBar(document.getElementById('status-indicator')!);
 
@@ -55,7 +73,7 @@ class RemoteMouseApp {
 
         // 5. Keyboard
         this.keyboard = new KeyboardHandler(
-            document.getElementById('keyboard-input')! as HTMLTextAreaElement,
+            document.getElementById('keyboard-input')! as HTMLInputElement,
             document.getElementById('btn-keyboard')!,
             document.getElementById('fn-panel')!,
             {
@@ -162,7 +180,7 @@ class RemoteMouseApp {
         this.transport.send(buffer);
 
         if (mask !== 0) {
-             this.keyboard.resetModifiers();
+            this.keyboard.resetModifiers();
         }
     }
 

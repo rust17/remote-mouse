@@ -6,7 +6,7 @@ interface KeyboardCallbacks {
 }
 
 export class KeyboardHandler {
-    private inputEl: HTMLTextAreaElement;
+    private inputEl: HTMLInputElement;
     private toggleBtn: HTMLElement;
     private fnPanelEl: HTMLElement;
     private callbacks: KeyboardCallbacks;
@@ -17,7 +17,7 @@ export class KeyboardHandler {
     private activeModifiers = 0; // Bitmask: 1=Ctrl, 2=Shift, 4=Alt, 8=Win
 
     constructor(
-        inputEl: HTMLTextAreaElement,
+        inputEl: HTMLInputElement,
         toggleBtn: HTMLElement,
         fnPanelEl: HTMLElement,
         callbacks: KeyboardCallbacks,
@@ -143,8 +143,13 @@ export class KeyboardHandler {
         // Add visual click effect for non-modifier keys
         this.fnPanelEl.addEventListener('pointerdown', (e) => {
             const target = (e.target as HTMLElement).closest('.fn-btn');
-            if (target && !target.hasAttribute('data-modifier')) {
-                target.classList.add('active');
+            if (target) {
+                // Prevent focus loss from inputEl to keep keyboard open
+                e.preventDefault();
+                
+                if (!target.hasAttribute('data-modifier')) {
+                    target.classList.add('active');
+                }
             }
         });
 

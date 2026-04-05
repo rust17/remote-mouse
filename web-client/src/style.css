@@ -268,8 +268,9 @@ body, html {
 /* --- FAB Toolbar (Segmented Capsule) --- */
 #toolbar-fab {
   position: absolute;
-  bottom: 150px; /* Increased spacing from fn-panel */
+  bottom: 100%; /* Float above the top of its parent (#fn-panel) */
   right: 15px;
+  margin-bottom: 20px; /* Fixed distance to fn-panel top edge */
   z-index: 20;
 }
 
@@ -349,16 +350,43 @@ body, html {
   color: var(--accent-color);
   transform: scale(0.94);
 }
-
 /* --- Hidden Input --- */
 #keyboard-input {
-  position: absolute;
-  top: -1000px;
-  left: -1000px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   opacity: 0;
-  width: 1px;
-  height: 1px;
+  z-index: -1;
   pointer-events: none;
+  caret-color: transparent;
+  background: transparent;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Optimization for keyboard open state */
+.keyboard-open #status-bar {
+  display: none;
+}
+
+.keyboard-open #fn-panel {
+  padding-top: 8px;
+  padding-bottom: 0; /* No bottom padding needed as it sits on keyboard */
+  gap: 8px;
+}
+
+.keyboard-open .fn-btn {
+  height: 40px;
+  font-size: 13px;
+}
+
+.keyboard-open .fn-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* --- Modal --- */
