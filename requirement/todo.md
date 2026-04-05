@@ -1,6 +1,6 @@
 edit:
     - status-bar.ts
-        - [ ] 将 StatusBar 中的 status 封装成枚举，remove 从枚举里通过 all 方法获取
+        - [x] 将 StatusBar 中的 status 封装成枚举，remove 从枚举里通过 all 方法获取
 
 ---
 
@@ -19,4 +19,4 @@ add:
 
 add:
     - 交互
-        - [ ] 增加震动反馈
+        - [x] 增加震动反馈

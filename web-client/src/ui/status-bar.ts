@@ -1,3 +1,5 @@
+import { ConnectionStatus, allConnectionStatuses } from '../core/protocol';
+
 export class StatusBar {
     private indicatorEl: HTMLElement;
     private textEl: HTMLElement;
@@ -7,9 +9,12 @@ export class StatusBar {
         this.textEl = indicatorEl.querySelector('.status-text')!;
     }
 
-    public update(status: string, state: 'connected' | 'disconnected' | 'connecting') {
-        this.textEl.textContent = status;
-        this.indicatorEl.classList.remove('status-connected', 'status-disconnected', 'status-connecting');
-        this.indicatorEl.classList.add(`status-${state}`);
+    public update(text: string, status: ConnectionStatus) {
+        this.textEl.textContent = text;
+        const allStatusClasses = allConnectionStatuses.map(s => `status-${s}`);
+        this.indicatorEl.classList.remove(...allStatusClasses);
+        this.indicatorEl.classList.add(`status-${status}`);
     }
 }
+
+
