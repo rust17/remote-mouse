@@ -1,28 +1,33 @@
+import { WebHaptics } from 'web-haptics';
+
 interface KeyboardCallbacks {
     onText: (text: string) => void;
     onKeyAction: (key: string, modifierMask?: number) => void;
 }
 
 export class KeyboardHandler {
-    private inputEl: HTMLTextAreaElement;
+    private inputEl: HTMLInputElement;
     private toggleBtn: HTMLElement;
     private fnPanelEl: HTMLElement;
     private callbacks: KeyboardCallbacks;
+    private haptics: WebHaptics;
 
     private isComposing = false;
     private isOpen = false;
     private activeModifiers = 0; // Bitmask: 1=Ctrl, 2=Shift, 4=Alt, 8=Win
 
     constructor(
-        inputEl: HTMLTextAreaElement,
+        inputEl: HTMLInputElement,
         toggleBtn: HTMLElement,
         fnPanelEl: HTMLElement,
-        callbacks: KeyboardCallbacks
+        callbacks: KeyboardCallbacks,
+        haptics: WebHaptics
     ) {
         this.inputEl = inputEl;
         this.toggleBtn = toggleBtn;
         this.fnPanelEl = fnPanelEl;
         this.callbacks = callbacks;
+        this.haptics = haptics;
 
         this.initListeners();
         this.initFnKeys();
@@ -30,6 +35,7 @@ export class KeyboardHandler {
 
     public toggle(show?: boolean) {
         this.isOpen = show !== undefined ? show : !this.isOpen;
+        this.haptics.trigger('light');
         if (this.isOpen) {
             this.inputEl.focus();
             this.toggleBtn.classList.add('active');
@@ -133,6 +139,34 @@ export class KeyboardHandler {
                 this.resetModifiers();
             }
         });
+
+        // Add visual click effect for non-modifier keys
+        this.fnPanelEl.addEventListener('pointerdown', (e) => {
+            const target = (e.target as HTMLElement).closest('.fn-btn');
+            if (target) {
+                // Prevent focus loss from inputEl to keep keyboard open
+                e.preventDefault();
+                
+                if (!target.hasAttribute('data-modifier')) {
+                    target.classList.add('active');
+                }
+            }
+        });
+
+        const clearActive = (e: PointerEvent) => {
+            const target = (e.target as HTMLElement).closest('.fn-btn');
+            if (target && !target.hasAttribute('data-modifier')) {
+                // Only remove if we're not moving into another child of the same button
+                if (e.type === 'pointerout' && e.relatedTarget) {
+                    if ((e.relatedTarget as HTMLElement).closest('.fn-btn') === target) return;
+                }
+                target.classList.remove('active');
+            }
+        };
+
+        this.fnPanelEl.addEventListener('pointerup', clearActive);
+        this.fnPanelEl.addEventListener('pointerout', clearActive);
+        this.fnPanelEl.addEventListener('pointercancel', clearActive);
     }
 
     public resetModifiers() {

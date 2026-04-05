@@ -7,6 +7,7 @@ import { ScrollStripHandler } from './input/scroll-strip';
 import { KeyboardHandler } from './input/keyboard';
 import { StatusBar } from './ui/status-bar';
 import { SettingsManager } from './ui/settings';
+import { WebHaptics } from 'web-haptics';
 
 class RemoteMouseApp {
     private transport: Transport;
@@ -14,11 +15,32 @@ class RemoteMouseApp {
     private scrollStrip: ScrollStripHandler;
     private keyboard: KeyboardHandler;
     private statusBar: StatusBar;
+    private haptics = new WebHaptics();
     private moveBuffer = new ArrayBuffer(5);
     private moveView = new DataView(this.moveBuffer);
     private rateMonitorTimer: number | null = null;
 
     constructor() {
+        if (window.visualViewport) {
+            const updateViewport = () => {
+                const vh = window.visualViewport!.height;
+                document.body.style.height = `${vh}px`;
+
+                // If viewport is significantly smaller than window height, keyboard is likely open
+                if (vh < window.innerHeight * 0.85) {
+                    document.body.classList.add('keyboard-open');
+                    document.documentElement.classList.add('keyboard-open');
+                } else {
+                    document.body.classList.remove('keyboard-open');
+                    document.documentElement.classList.remove('keyboard-open');
+                }
+
+                window.scrollTo(0, 0);
+            };
+            window.visualViewport.addEventListener('resize', updateViewport);
+            updateViewport();
+        }
+
         // 1. UI Elements
         this.statusBar = new StatusBar(document.getElementById('status-indicator')!);
 
@@ -53,13 +75,14 @@ class RemoteMouseApp {
 
         // 5. Keyboard
         this.keyboard = new KeyboardHandler(
-            document.getElementById('keyboard-input')! as HTMLTextAreaElement,
+            document.getElementById('keyboard-input')! as HTMLInputElement,
             document.getElementById('btn-keyboard')!,
             document.getElementById('fn-panel')!,
             {
                 onText: (text) => this.sendText(text),
                 onKeyAction: (key, modifierMask) => this.sendKeyAction(key, modifierMask)
-            }
+            },
+            this.haptics
         );
 
         // 6. Settings
@@ -78,6 +101,7 @@ class RemoteMouseApp {
             document.getElementById('theme-toggle')! as HTMLInputElement,
             document.getElementById('scroll-pos-toggle')! as HTMLInputElement,
             document.getElementById('rate-monitor-toggle')! as HTMLInputElement,
+            document.getElementById('lang-select')! as HTMLSelectElement,
             (val) => this.touchpad.setSensitivity(val),
             (val) => {
                 this.touchpad.setScrollSensitivity(val);
@@ -101,7 +125,7 @@ class RemoteMouseApp {
                         this.rateMonitorTimer = null;
                     }
                 }
-                
+
                 // Server-side tray rate
                 fetch(`/api/settings/tray/rate?enabled=${enabled ? 'true' : 'false'}`, {
                     method: 'POST'
@@ -116,6 +140,14 @@ class RemoteMouseApp {
         document.getElementById('touchpad')!.addEventListener('pointerdown', () => {
             if (this.keyboard.isOpenState()) {
                 this.keyboard.toggle(false);
+            }
+        });
+
+        // Global haptic feedback for buttons and interactive inputs
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('button') || target.closest('input[type="checkbox"]') || target.closest('input[type="range"]')) {
+                this.haptics.trigger('light');
             }
         });
     }
@@ -139,6 +171,7 @@ class RemoteMouseApp {
     }
 
     private sendClick(button: number) {
+        this.haptics.trigger('medium');
         // [OpCode] [Button] [ModifierMask]
         const mask = this.keyboard.getActiveModifiers();
         const buffer = new ArrayBuffer(3);
@@ -149,7 +182,7 @@ class RemoteMouseApp {
         this.transport.send(buffer);
 
         if (mask !== 0) {
-             this.keyboard.resetModifiers();
+            this.keyboard.resetModifiers();
         }
     }
 

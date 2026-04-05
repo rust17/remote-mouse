@@ -17,7 +17,7 @@
   --status-green: #22c55e;
   --status-red: #ef4444;
   --status-yellow: #eab308;
-  
+
   --scroll-strip-width: 40px;
   --scroll-strip-bg: rgba(255, 255, 255, 0.03);
   --scroll-strip-active: rgba(59, 130, 246, 0.1);
@@ -26,22 +26,22 @@
   /* Theming Variables (extracted for Light Mode) */
   --status-bg: rgba(30, 35, 45, 0.8);
   --status-border: rgba(255, 255, 255, 0.05);
-  
+
   --strip-handle: rgba(255, 255, 255, 0.1);
-  
+
   --fn-btn-bg: rgba(45, 50, 60, 0.3);
   --fn-btn-border: rgba(255, 255, 255, 0.12);
   --fn-btn-highlight: rgba(255, 255, 255, 0.05);
   --fn-btn-active-bg: rgba(255, 255, 255, 0.15);
-  
+
   --fab-bg: rgba(30, 35, 45, 0.4);
   --fab-border: rgba(255, 255, 255, 0.15);
   --fab-shadow: rgba(0, 0, 0, 0.5);
-  
+
   --modal-overlay: rgba(0, 0, 0, 0.6);
   --modal-border: rgba(255, 255, 255, 0.1);
   --modal-shadow: rgba(0, 0, 0, 0.5);
-  
+
   --input-range-track: rgba(255, 255, 255, 0.1);
 
   --action-key-bg: rgba(42, 46, 56, 0.7);
@@ -65,6 +65,11 @@ body, html {
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   touch-action: none;
+  transition: background-color 0.3s ease;
+}
+
+html.keyboard-open, body.keyboard-open {
+  background-color: var(--panel-bg);
 }
 
 #app {
@@ -199,9 +204,9 @@ body, html {
   background-image:
     radial-gradient(circle at center, transparent 0%, var(--touchpad-bg-edge) 120%),
     repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 10px);
-    
+
   /* Ensure touchpad content doesn't overlap the scroll strip visually if we want distinct areas */
-  padding-left: var(--scroll-strip-width); 
+  padding-left: var(--scroll-strip-width);
 }
 
 
@@ -210,7 +215,6 @@ body, html {
 #fn-panel {
   padding: 12px 16px 20px; /* Extra bottom padding for safe area */
   background: var(--panel-bg);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 10px;
@@ -248,7 +252,7 @@ body, html {
 }
 
 /* Modifier Toggle Active State */
-.fn-btn.modifier.active {
+.fn-btn.active {
   background: rgba(59, 130, 246, 0.25);
   border-color: var(--accent-color);
   color: #fff;
@@ -268,8 +272,9 @@ body, html {
 /* --- FAB Toolbar (Segmented Capsule) --- */
 #toolbar-fab {
   position: absolute;
-  bottom: 150px; /* Increased spacing from fn-panel */
+  bottom: 100%; /* Float above the top of its parent (#fn-panel) */
   right: 15px;
+  margin-bottom: 20px; /* Fixed distance to fn-panel top edge */
   z-index: 20;
 }
 
@@ -349,16 +354,43 @@ body, html {
   color: var(--accent-color);
   transform: scale(0.94);
 }
-
 /* --- Hidden Input --- */
 #keyboard-input {
-  position: absolute;
-  top: -1000px;
-  left: -1000px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   opacity: 0;
-  width: 1px;
-  height: 1px;
+  z-index: -1;
   pointer-events: none;
+  caret-color: transparent;
+  background: transparent;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Optimization for keyboard open state */
+.keyboard-open #status-bar {
+  display: none;
+}
+
+.keyboard-open #fn-panel {
+  padding-top: 8px;
+  padding-bottom: 0; /* No bottom padding needed as it sits on keyboard */
+  gap: 8px;
+}
+
+.keyboard-open .fn-btn {
+  height: 40px;
+  font-size: 13px;
+}
+
+.keyboard-open .fn-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* --- Modal --- */
@@ -543,7 +575,7 @@ input:checked + .slider:before {
   --touchpad-bg-center: #f1f5f9;
   --touchpad-bg-edge: #e2e8f0;
 
-  --accent-color: #3b82f6; 
+  --accent-color: #3b82f6;
   --accent-glow: rgba(59, 130, 246, 0.4);
 
   --text-primary: #1e293b;
@@ -556,29 +588,29 @@ input:checked + .slider:before {
   --status-green: #16a34a;
   --status-red: #dc2626;
   --status-yellow: #ca8a04;
-  
+
   --scroll-strip-bg: rgba(0, 0, 0, 0.03);
   --scroll-strip-active: rgba(59, 130, 246, 0.1);
   --scroll-strip-border: rgba(0, 0, 0, 0.05);
 
   --status-bg: rgba(255, 255, 255, 0.8);
   --status-border: rgba(0, 0, 0, 0.05);
-  
+
   --strip-handle: rgba(0, 0, 0, 0.1);
-  
+
   --fn-btn-bg: rgba(255, 255, 255, 0.6);
   --fn-btn-border: rgba(0, 0, 0, 0.1);
   --fn-btn-highlight: rgba(255, 255, 255, 0.5);
   --fn-btn-active-bg: rgba(0, 0, 0, 0.05);
-  
+
   --fab-bg: rgba(255, 255, 255, 0.8);
   --fab-border: rgba(0, 0, 0, 0.1);
   --fab-shadow: rgba(0, 0, 0, 0.1);
-  
+
   --modal-overlay: rgba(0, 0, 0, 0.2);
   --modal-border: rgba(0, 0, 0, 0.05);
   --modal-shadow: rgba(0, 0, 0, 0.1);
-  
+
   --input-range-track: rgba(0, 0, 0, 0.1);
 
   --action-key-bg: rgba(255, 255, 255, 0.6);
