@@ -121,6 +121,23 @@ def check_macos(image: Path, version: str, cwd: Path):
         run("hdiutil", "detach", mount)
 
 
+def uninstall_windows(installed: Path, cwd: Path):
+    """Inno's launcher can exit before its temporary uninstaller finishes."""
+    uninstaller = installed / "unins000.exe"
+    log = cwd / "uninstall.log"
+    try:
+        run(uninstaller, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/LOG={log}")
+        deadline = time.monotonic() + 30
+        while (installed / "RemoteMouse.exe").exists() or uninstaller.exists():
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Windows uninstall did not finish within 30 seconds")
+            time.sleep(0.25)
+    except Exception:
+        if log.exists():
+            print(log.read_text(errors="replace"), flush=True)
+        raise
+
+
 def check_windows(products: Path, names: list[str], cwd: Path):
     portable = cwd / "portable"
     with zipfile.ZipFile(products / names[1]) as archive:
@@ -136,21 +153,24 @@ def check_windows(products: Path, names: list[str], cwd: Path):
     if sentinel.exists():
         raise ValueError("Installer smoke sentinel already exists; use a clean CI runner")
     sentinel.write_text("preserve user data", encoding="utf-8")
+    uninstall_started = False
     try:
         for _ in range(2):
             run(installer, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/DIR={installed}")
             if not uninstaller.is_file():
                 raise ValueError("Installer did not create an uninstaller")
             check_directory(installed, cwd, windows=True)
-        run(uninstaller, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
-        deadline = time.monotonic() + 15
-        while (installed / "RemoteMouse.exe").exists() and time.monotonic() < deadline:
-            time.sleep(0.25)
-        if (installed / "RemoteMouse.exe").exists() or not sentinel.exists():
-            raise ValueError("Uninstall did not remove application or removed user data")
+        uninstall_started = True
+        uninstall_windows(installed, cwd)
+        if not sentinel.exists():
+            raise ValueError("Uninstall removed user data")
     finally:
-        if uninstaller.exists():
-            run(uninstaller, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
+        if not uninstall_started and uninstaller.exists():
+            try:
+                uninstall_windows(installed, cwd)
+            except Exception as error:
+                # Keep the original install/startup failure visible.
+                print(f"Windows cleanup also failed: {error}", flush=True)
         sentinel.unlink(missing_ok=True)
 
 

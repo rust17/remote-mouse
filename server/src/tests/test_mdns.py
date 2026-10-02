@@ -1,5 +1,6 @@
 import socket
 
+import pytest
 from server.services.mdns import MDNSResponder
 
 
@@ -66,3 +67,33 @@ def test_unregister_without_register(mock_zeroconf):
 
     mock_zeroconf.unregister_service.assert_not_called()
     mock_zeroconf.close.assert_called_once()
+
+
+@pytest.mark.parametrize("machine_name", ["my-mac", "runner-" + "x" * 100, "测试" * 40])
+def test_development_names_fit_dns_labels(mock_zeroconf, mock_socket, monkeypatch, machine_name):
+    monkeypatch.setattr("server.services.mdns.is_dev", lambda: True)
+    monkeypatch.setattr("server.services.mdns.socket.gethostname", lambda: machine_name)
+    responder = MDNSResponder()
+    responder.register()
+    info = mock_zeroconf.register_service.call_args.args[0]
+    assert len(info.name.split(".")[0].encode("utf-8")) <= 63
+    assert len(info.server.split(".")[0].encode("utf-8")) <= 63
+    responder.unregister()
+    mock_zeroconf.unregister_service.assert_called_once_with(info)
+    if machine_name == "my-mac":
+        assert info.name == "Remote Mouse (my-mac) Service._http._tcp.local."
+        assert info.server == "remote-mouse-my-mac.local."
+
+
+def test_long_development_names_remain_distinct(mock_zeroconf, mock_socket, monkeypatch):
+    monkeypatch.setattr("server.services.mdns.is_dev", lambda: True)
+    names = []
+    for suffix in ["a", "b", "a"]:
+        monkeypatch.setattr(
+            "server.services.mdns.socket.gethostname", lambda s=suffix: "x" * 100 + s
+        )
+        responder = MDNSResponder()
+        responder.register()
+        names.append((responder.service_info.name, responder.hostname))
+    assert names[0] != names[1]
+    assert names[0] == names[2]

@@ -1,8 +1,19 @@
+import hashlib
 import socket
-from zeroconf import IPVersion, ServiceInfo, Zeroconf
-from loguru import logger
 
+from loguru import logger
 from server.config import APP_NAME, DEFAULT_PORT, MDNS_HOSTNAME, is_dev
+from zeroconf import IPVersion, ServiceInfo, Zeroconf
+
+
+def _shorten_dns_label(label: str) -> str:
+    """Keep DNS labels within 63 UTF-8 bytes without merging long host names."""
+    encoded = label.encode("utf-8")
+    if len(encoded) <= 63:
+        return label
+    suffix = hashlib.sha256(encoded).hexdigest()[:8]
+    prefix = encoded[:54].decode("utf-8", errors="ignore")
+    return f"{prefix}-{suffix}"
 
 
 class MDNSResponder:
@@ -20,7 +31,7 @@ class MDNSResponder:
 
             # Strip ".local." or ".local" from the base hostname and append machine name
             base = hostname.replace(".local.", "").replace(".local", "").strip(".")
-            self.hostname = f"{base}-{machine_name}.local."
+            self.hostname = f"{_shorten_dns_label(f'{base}-{machine_name}')}.local."
         else:
             self.service_name_base = service_name
             self.hostname = hostname
@@ -42,7 +53,8 @@ class MDNSResponder:
         logger.info(f"Detected Local IP: {local_ip}")
 
         # 我们注册一个固定的服务名以便发现，但也包含主机名以防冲突
-        service_name = f"{self.service_name_base} Service.{self.SERVICE_TYPE}"
+        instance_name = _shorten_dns_label(f"{self.service_name_base} Service")
+        service_name = f"{instance_name}.{self.SERVICE_TYPE}"
 
         self.service_info = ServiceInfo(
             self.SERVICE_TYPE,
@@ -54,7 +66,8 @@ class MDNSResponder:
         )
 
         logger.info(
-            f"Registering mDNS service: {service_name} pointing to {self.hostname} ({local_ip}:{self.port})"
+            f"Registering mDNS service: {service_name} "
+            f"pointing to {self.hostname} ({local_ip}:{self.port})"
         )
         try:
             self.zeroconf.register_service(self.service_info)

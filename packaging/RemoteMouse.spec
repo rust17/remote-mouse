@@ -22,7 +22,9 @@ a = Analysis(
     hiddenimports=[f"pystray._{backend}"] + collect_submodules("uvicorn"),
     hookspath=[],
     runtime_hooks=[str(root / "packaging/runtime_hook.py")],
-    excludes=["tkinter", "unittest"],
+    # MouseInfo is an optional coordinate-inspection GUI. On Linux it calls
+    # sys.exit() if tkinter is unavailable, even when only importing PyAutoGUI.
+    excludes=["tkinter", "mouseinfo", "unittest"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
