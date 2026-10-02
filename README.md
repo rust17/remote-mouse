@@ -30,27 +30,44 @@ Remote Mouse is a lightweight, low-latency remote control tool that transforms y
 Get the latest version from the [Releases](https://github.com/rust17/remote-mouse/releases) page.
 
 #### Windows
-1. Download `RemoteMouse.exe`.
-2. **Right-click** and select **"Run as Administrator"** (Required for controlling certain applications).
-3. Allow access if prompted by Windows Firewall.
+
+1. Download the file ending in `-setup.exe`, install it, and open **Remote Mouse** from the Start menu.
+2. For a portable version, download `-portable.zip`, extract the whole folder, and run `RemoteMouse.exe`. Keep all files together.
+3. Allow private-network access if the firewall asks. Use **Run as Administrator** only to control apps that also run as administrator.
 
 #### macOS
-1. Download the `RemoteMouse` binary.
-2. Open Terminal and make it executable:
-   ```bash
-   chmod +x ~/Downloads/RemoteMouse
-   ```
-3. Right-click the file in Finder and select **"Open"**.
-4. **Grant Permissions**: Go to `System Settings` > `Privacy & Security` > `Accessibility` and add/enable `RemoteMouse`. Without this, the server cannot move the cursor.
+
+1. Download the DMG for your Mac: **Apple Silicon (M-series)** uses `macos-arm64`; **Intel** uses `macos-x86_64`.
+2. Open the DMG, drag `RemoteMouse.app` into Applications, and launch it. Look for its icon in the menu bar.
+3. In **System Settings > Privacy & Security > Accessibility**, add and enable RemoteMouse so it can control your mouse and keyboard.
+
+The app is not Developer ID-signed or notarized. If macOS blocks it, check the download source and allow it to open in **Privacy & Security**.
+
+#### Linux
+
+1. Download the file ending in `linux-x86_64.tar.gz` and extract the whole folder.
+2. Run `./RemoteMouse/RemoteMouse`. Use an **X11** desktop; Wayland is not supported. See the included `README.txt` for dependencies.
+3. The Linux tray has no right-click menu. Restart the program to restart the service; use `--port` and `--log` to set the port and enable logs.
+
+### Build & release
+
+To build on your computer, install **Node.js 22, uv and Python 3.13**, then run from the repository root:
+
+```bash
+uv run --frozen --project server python packaging/build.py
+```
+
+Find the packages in `packaging/out/<platform>-<architecture>/products/`. See [the packaging guide](packaging/README.md) for platform requirements and release steps.
 
 ---
 
 ### Usage
+
 1. Start the server on your computer.
 2. Ensure your phone and computer are on the **same local network (Wi-Fi)**.
 3. Find the access address:
    - Recommended: **http://remote-mouse.local:9997**
-   - Alternative: Right-click the **tray icon** on your computer to see the IP address (e.g., `http://192.168.1.10:9997`).
+   - Alternative: Use your computer's IP address, for example `http://192.168.1.10:9997`. Find it in network settings or the tray menu on Windows/macOS.
 4. Open the address in your mobile browser.
 5. (Optional) Add to Home Screen to install as a PWA.
 6. Start controlling!

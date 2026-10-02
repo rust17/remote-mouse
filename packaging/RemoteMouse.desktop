@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Remote Mouse
+Comment=Control your computer from a mobile browser (X11)
+Exec=/ABSOLUTE/PATH/RemoteMouse/RemoteMouse
+Icon=/ABSOLUTE/PATH/RemoteMouse/_internal/assets/tray_icon.png
+Terminal=false
+Categories=Utility;

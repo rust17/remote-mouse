@@ -1,10 +1,11 @@
-import pytest
 import socket
+
 from server.services.mdns import MDNSResponder
 
 
-def test_initialization(mock_zeroconf):
+def test_initialization(mock_zeroconf, monkeypatch):
     """Test that MDNSResponder initializes correctly."""
+    monkeypatch.setattr("server.services.mdns.is_dev", lambda: False)
     responder = MDNSResponder(service_name="Test Service", port=1234, hostname="test.local.")
 
     assert responder.service_name_base == "Test Service"
@@ -24,8 +25,9 @@ def test_get_local_ip(mock_zeroconf, mock_socket):
     )
 
 
-def test_register_service(mock_zeroconf, mock_socket):
+def test_register_service(mock_zeroconf, mock_socket, monkeypatch):
     """Test that register creates the correct ServiceInfo and registers it."""
+    monkeypatch.setattr("server.services.mdns.is_dev", lambda: False)
     responder = MDNSResponder(service_name="MyMouse", port=5555, hostname="mymouse.local.")
 
     responder.register()

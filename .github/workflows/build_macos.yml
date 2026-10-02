@@ -2,50 +2,40 @@ name: Build macOS Server
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [master]
     paths:
       - 'server/**'
       - 'web-client/**'
+      - 'packaging/**'
       - '.github/workflows/build_macos.yml'
+      - '.github/workflows/build_platform.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    # --- 1. Build Web Client ---
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: web-client/package-lock.json
-
-    - name: Build Web Client
-      working-directory: ./web-client
-      run: |
-        npm ci
-        npm run build
-
-    # --- 2. Build Python Server ---
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        python-version: '3.13'
-        enable-cache: true
-        cache-dependency-glob: "server/uv.lock"
-
-    - name: Build with PyInstaller
-      working-directory: ./server
-      # --add-data format for macOS/Linux: "source_path:dest_folder_name" (separator is :)
-      run: |
-        uv run --frozen pyinstaller --clean --onefile --noconsole --name "RemoteMouse" --exclude-module tkinter --exclude-module unittest --add-data "../web-client/dist:web_dist" --add-data "src/server/assets:assets" src/server/main.py
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: RemoteMouse-macos
-        path: server/dist/RemoteMouse
+  build-arm64:
+    uses: ./.github/workflows/build_platform.yml
+    with:
+      platform: macos
+      arch: arm64
+      runner: macos-14
+      source_sha: ${{ inputs.source_sha || github.sha }}
+      version: ${{ inputs.version || '' }}
+  build-x86_64:
+    uses: ./.github/workflows/build_platform.yml
+    with:
+      platform: macos
+      arch: x86_64
+      runner: macos-15-intel
+      source_sha: ${{ inputs.source_sha || github.sha }}
+      version: ${{ inputs.version || '' }}

@@ -1,0 +1,99 @@
+name: Build Platform
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      source_sha:
+        type: string
+        default: ''
+      version:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-client/package-lock.json
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: server/uv.lock
+      - name: Install Linux runtime and test dependencies
+        if: inputs.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libx11-6 libxtst6 xclip
+          touch "$HOME/.Xauthority"
+      - name: Install Inno Setup
+        if: inputs.platform == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --version=6.4.3 --yes --no-progress
+          }
+      - name: Build distributables
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+          BUILD_PLATFORM: ${{ inputs.platform }}
+        run: |
+          args=(--commit "$SOURCE_SHA")
+          if [[ -n "$BUILD_VERSION" ]]; then args+=(--version "$BUILD_VERSION"); fi
+          if [[ "$BUILD_PLATFORM" == linux ]]; then
+            xvfb-run -a uv run --frozen --project server python packaging/build.py "${args[@]}"
+          else
+            uv run --frozen --project server python packaging/build.py "${args[@]}"
+          fi
+      - name: Test web client
+        working-directory: web-client
+        run: npm run test -- --run
+      - name: Test server and packaging
+        env:
+          BUILD_PLATFORM: ${{ inputs.platform }}
+        run: |
+          if [[ "$BUILD_PLATFORM" == linux ]]; then
+            PYSTRAY_BACKEND=xorg xvfb-run -a uv run --frozen --project server pytest server/src/tests packaging/tests
+          else
+            uv run --frozen --project server pytest server/src/tests packaging/tests
+          fi
+      - name: Check packaging and changed server files
+        run: uv run --frozen --project server ruff check --config server/pyproject.toml packaging server/src/server/config.py server/src/tests/test_config.py server/src/tests/test_web_service.py server/src/tests/test_mdns.py server/src/tests/test_connection.py
+      - name: Validate shipped artifacts
+        env:
+          BUILD_PLATFORM: ${{ inputs.platform }}
+          PRODUCTS: packaging/out/${{ inputs.platform }}-${{ inputs.arch }}/products
+        run: |
+          if [[ "$BUILD_PLATFORM" == linux ]]; then
+            PYSTRAY_BACKEND=xorg xvfb-run -a uv run --frozen --project server python packaging/smoke.py --products "$PRODUCTS"
+          else
+            uv run --frozen --project server python packaging/smoke.py --products "$PRODUCTS"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RemoteMouse-${{ inputs.platform }}-${{ inputs.arch }}
+          path: packaging/out/${{ inputs.platform }}-${{ inputs.arch }}/products/*
+          if-no-files-found: error

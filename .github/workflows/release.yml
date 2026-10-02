@@ -4,71 +4,109 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name (e.g., v1.0.0)'
+        description: 'Existing tag (vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease)'
         required: true
-        default: 'v1.0.0'
+        type: string
       release_name:
-        description: 'Release Title'
+        description: 'Release title'
         required: true
-        default: 'New Release'
+        type: string
       release_body:
-        description: 'Release Description'
-        required: false
+        description: 'Release description'
         default: 'Automated release.'
         type: string
+      prerelease:
+        description: 'Mark as prerelease'
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag_name }}
+  cancel-in-progress: false
 
 jobs:
-  release-latest:
-    name: Release Latest Artifacts
-    runs-on: ubuntu-latest
+  prepare:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      commit: ${{ steps.identity.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Resolve existing tag
+        id: identity
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: python packaging/release.py prepare --tag "$RELEASE_TAG"
+      - name: Refuse to overwrite an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name' > existing-tags.txt
+          if grep -Fxq -- "$RELEASE_TAG" existing-tags.txt; then
+            echo "A release already exists for $RELEASE_TAG" >&2
+            exit 1
+          fi
+  macos:
+    needs: prepare
+    uses: ./.github/workflows/build_macos.yml
+    with:
+      source_sha: ${{ needs.prepare.outputs.commit }}
+      version: ${{ needs.prepare.outputs.version }}
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/build_windows.yml
+    with:
+      source_sha: ${{ needs.prepare.outputs.commit }}
+      version: ${{ needs.prepare.outputs.version }}
+  linux:
+    needs: prepare
+    uses: ./.github/workflows/build_linux.yml
+    with:
+      source_sha: ${{ needs.prepare.outputs.commit }}
+      version: ${{ needs.prepare.outputs.version }}
+  publish:
+    needs: [prepare, macos, windows, linux]
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
-      actions: read
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download macOS Artifact
-        uses: dawidd6/action-download-artifact@v6
+      - uses: actions/checkout@v4
         with:
-          workflow: build_macos.yml
-          name: RemoteMouse-macos
-          path: assets/macos
-          workflow_conclusion: success
-
-      - name: Download Windows Artifact
-        uses: dawidd6/action-download-artifact@v6
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
         with:
-          workflow: build_windows.yml
-          name: RemoteMouse-exe
-          path: assets/windows
-          workflow_conclusion: success
-
-      - name: Download Linux Artifact
-        uses: dawidd6/action-download-artifact@v6
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
         with:
-          workflow: build_linux.yml
-          name: RemoteMouse-linux
-          path: assets/linux
-          workflow_conclusion: success
-
-      - name: Rename Artifacts
+          pattern: RemoteMouse-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify all build identities and checksums
+        env:
+          BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.commit }}
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: python packaging/release.py verify --directory release-assets --version "$BUILD_VERSION" --commit "$SOURCE_SHA" --tag "$RELEASE_TAG"
+      - name: Create release and upload verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag_name }}
+          RELEASE_TITLE: ${{ inputs.release_name }}
+          RELEASE_BODY: ${{ inputs.release_body }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.commit }}
         run: |
-          mv assets/macos/RemoteMouse assets/RemoteMouse-macos
-          mv assets/linux/RemoteMouse assets/RemoteMouse-linux
-          mv assets/windows/RemoteMouse.exe assets/RemoteMouse-windows.exe
-          rm -rf assets/macos assets/linux assets/windows
-
-      - name: Display downloaded files
-        run: ls -R assets
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.tag_name }}
-          name: ${{ github.event.inputs.release_name }}
-          body: ${{ github.event.inputs.release_body }}
-          files: assets/**/*
-          draft: false
-          prerelease: true
+          printf '%s\n' "$RELEASE_BODY" > release-notes.txt
+          flags=()
+          if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" release-assets/* --draft --verify-tag --target "$SOURCE_SHA" --title "$RELEASE_TITLE" --notes-file release-notes.txt "${flags[@]}"
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRERELEASE"
