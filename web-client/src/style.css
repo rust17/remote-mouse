@@ -532,6 +532,38 @@ input[type=range]::-webkit-slider-runnable-track {
   height: 0;
 }
 
+/* iOS direct-tap haptics: opacity preserves native rendering and activation. */
+.native-haptic-target {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.native-haptic-target > .fn-btn {
+  width: 100%;
+}
+
+.native-haptic-target > .native-haptic-switch,
+.switch > .native-haptic-switch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  z-index: 1;
+  appearance: auto;
+  -webkit-appearance: auto;
+  cursor: pointer;
+  clip-path: inset(0 round var(--haptic-radius, 24px));
+}
+
+.native-haptic-target:active > button {
+  transform: translateY(1px);
+  filter: brightness(1.15);
+}
+
 .slider {
   position: absolute;
   cursor: pointer;

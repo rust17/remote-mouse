@@ -35,7 +35,9 @@ export class KeyboardHandler {
 
     public toggle(show?: boolean) {
         this.isOpen = show !== undefined ? show : !this.isOpen;
-        this.haptics.trigger('light');
+        if (!this.toggleBtn.closest('.native-haptic-target')) {
+            this.haptics.trigger('light');
+        }
         if (this.isOpen) {
             this.inputEl.focus();
             this.toggleBtn.classList.add('active');
@@ -115,6 +117,10 @@ export class KeyboardHandler {
             const target = (e.target as HTMLElement).closest('.fn-btn');
             if (!target) return;
 
+            // The iOS native switch may take focus during the real tap.
+            // Restore the text input within this activation to keep typing.
+            if (this.isOpen) this.inputEl.focus();
+
             const modifier = target.getAttribute('data-modifier');
             const key = target.getAttribute('data-key');
 
@@ -142,10 +148,13 @@ export class KeyboardHandler {
 
         // Add visual click effect for non-modifier keys
         this.fnPanelEl.addEventListener('pointerdown', (e) => {
-            const target = (e.target as HTMLElement).closest('.fn-btn');
+            const target = this.getFnButton(e.target);
             if (target) {
                 // Prevent focus loss from inputEl to keep keyboard open
-                e.preventDefault();
+                // Native switches need their default activation for haptics.
+                if (!(e.target as HTMLElement).classList.contains('native-haptic-switch')) {
+                    e.preventDefault();
+                }
                 
                 if (!target.hasAttribute('data-modifier')) {
                     target.classList.add('active');
@@ -154,11 +163,11 @@ export class KeyboardHandler {
         });
 
         const clearActive = (e: PointerEvent) => {
-            const target = (e.target as HTMLElement).closest('.fn-btn');
+            const target = this.getFnButton(e.target);
             if (target && !target.hasAttribute('data-modifier')) {
                 // Only remove if we're not moving into another child of the same button
                 if (e.type === 'pointerout' && e.relatedTarget) {
-                    if ((e.relatedTarget as HTMLElement).closest('.fn-btn') === target) return;
+                    if (this.getFnButton(e.relatedTarget) === target) return;
                 }
                 target.classList.remove('active');
             }
@@ -167,6 +176,13 @@ export class KeyboardHandler {
         this.fnPanelEl.addEventListener('pointerup', clearActive);
         this.fnPanelEl.addEventListener('pointerout', clearActive);
         this.fnPanelEl.addEventListener('pointercancel', clearActive);
+    }
+
+    private getFnButton(target: EventTarget | null): HTMLElement | null {
+        if (!(target instanceof Element)) return null;
+        return target.closest<HTMLElement>('.fn-btn')
+            ?? target.closest('.native-haptic-target')?.querySelector<HTMLElement>('.fn-btn')
+            ?? null;
     }
 
     public resetModifiers() {

@@ -7,6 +7,7 @@ import { ScrollStripHandler } from './input/scroll-strip';
 import { KeyboardHandler } from './input/keyboard';
 import { StatusBar } from './ui/status-bar';
 import { SettingsManager } from './ui/settings';
+import { installNativeHapticTargets } from './ui/native-haptics';
 import { WebHaptics } from 'web-haptics';
 
 class RemoteMouseApp {
@@ -143,9 +144,12 @@ class RemoteMouseApp {
             }
         });
 
+        installNativeHapticTargets(document.getElementById('app')!);
+
         // Global haptic feedback for buttons and interactive inputs
         document.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
+            if (target.closest('.native-haptic-target, .native-haptic-switch')) return;
             if (target.closest('button') || target.closest('input[type="checkbox"]') || target.closest('input[type="range"]')) {
                 this.haptics.trigger('light');
             }
