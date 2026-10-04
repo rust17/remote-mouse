@@ -1,0 +1,23 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "统一键盘交互": {
+      "versions": [
+        {
+          "path": "统一界面原型-v8.html",
+          "createdAt": "2026-10-03T23:13:45.728Z",
+          "status": "approved",
+          "subtitle": "已确认：电脑原版 12 键、TV 媒体控制，纯图标模式切换，共用输入配置",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          }
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-10-03T06:49:23.152Z",
+  "updatedAt": "2026-10-04T00:56:28.283075+00:00"
+}
