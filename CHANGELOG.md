@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.2] - 2026-10-05
+
+### Added
+
+- **Web Client**: Added computer and TV modes with a shared touchpad and keyboard. TV mode provides playback, seeking, fullscreen, volume and mute controls.
+- **Web Client**: Added live input and edit-then-send text entry, preserving unsent drafts when closing the panel or switching modes.
+- **Server**: Added system volume and mute control for macOS, Windows and Linux, with actual audio state reported to the phone.
+- **Server**: Added media capability detection and execution results. Unavailable controls are disabled, and timed-out or disconnected media actions are not automatically retried.
+
+### Changed
+
+- **Web Client**: Unified touchpad gestures across computer and TV modes, removing the TV single-tap delay and double-tap right click.
+- **Web Client**: Refined mode tabs, keyboard selection and connection feedback, and added a slim volume indicator without a numeric percentage.
+- **Web Client**: Switching modes or opening settings now closes the keyboard panel.
+- **Server**: Input and audio operations now run on separate serial worker threads to keep connections responsive.
+- **Docs**: Updated English and Chinese usage guides, project guidance and interaction design notes.
+
+### Fixed
+
+- **Server**: Fixed macOS fullscreen double clicks being interpreted as separate clicks.
+- **Server**: Release dragged mouse buttons on disconnect or shutdown, and prevent conflicting operations from other connections.
+- **Web Client**: Ignore messages from obsolete connections and expired media updates.
+- **Web Client**: Fixed the settings button retaining a focus outline after dismissing the dialog by touch, and restored button haptics on newer iOS versions.
+- **Web Client**: Fixed the top-edge display in the iOS 27 Home Screen app.
+
+# [v1.1.1] - 2026-10-03
+
+### Added
+
+- **Build**: Added macOS DMGs, a Windows installer and portable ZIP, and a Linux archive, with bundled web assets.
+- **Release**: Added multi-platform build and smoke checks, plus artifact checksums and build identity verification before publishing.
+
+### Changed
+
+- **Release**: Releases now build from an existing version tag through a manually started workflow.
+- **Docs**: Added platform installation, packaging and release instructions.
+
+### Fixed
+
+- **Build**: Fixed cross-platform packaging checks.
+
 # [v1.1.0] - 2026-04-06
 
 ### Added
