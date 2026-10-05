@@ -66,7 +66,8 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onClick).not.toHaveBeenCalled();
     });
 
-    it('should trigger Right Click (2) on two finger tap', () => {
+    it.each(['computer', 'tv'] as const)('%s mode sends one right click on a two-finger tap', mode => {
+        handler.setMode(mode);
         // Finger 1 down
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         // Finger 2 down
@@ -77,7 +78,7 @@ describe('TouchpadHandler', () => {
         // Finger 1 up
         element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
 
-        expect(callbacks.onClick).toHaveBeenCalledWith(2);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(2);
     });
 
     it('should trigger Scroll on two finger move', () => {
@@ -140,28 +141,28 @@ describe('TouchpadHandler', () => {
         });
     });
 
-    it('TV double tap sends only one right click; single tap waits for the double-tap window', () => {
+    it.each(['computer', 'tv'] as const)('%s mode sends immediate left clicks for single and double taps', mode => {
         vi.useFakeTimers();
-        handler.setMode('tv');
+        handler.setMode(mode);
         const tap = () => {
             element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
             element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
         };
         tap();
-        expect(callbacks.onClick).not.toHaveBeenCalled();
-        vi.advanceTimersByTime(100); tap(); vi.advanceTimersByTime(300);
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(2);
-        callbacks.onClick.mockClear();
-        tap(); vi.advanceTimersByTime(280);
         expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        vi.advanceTimersByTime(100);
+        tap();
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
+        handler.setMode(mode === 'tv' ? 'computer' : 'tv');
+        vi.advanceTimersByTime(300);
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
     });
 
-    it('switching modes cancels a pending TV tap and releases dragging', () => {
-        vi.useFakeTimers();
+    it('switching modes cancels an unfinished tap and releases dragging', () => {
         handler.setMode('tv');
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        handler.setMode('computer');
         element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
-        handler.setMode('computer'); vi.advanceTimersByTime(300);
         expect(callbacks.onClick).not.toHaveBeenCalled();
         for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
         handler.setMode('tv');

@@ -63,13 +63,11 @@ Choose the **computer icon** at the top for everyday computer use, or the **TV i
 | Gesture | What it does |
 | --- | --- |
 | Slide one finger | Move the pointer |
-| Tap once | Left click; TV mode has a short delay |
+| Tap once | Left click |
 | Tap with two fingers | Right click |
 | Slide two fingers | Scroll |
 | Slide on the side strip | Scroll with one finger |
 | Slide three fingers | Drag; lift a finger to release |
-
-In computer mode, a one-finger double tap gives two left clicks. In TV mode, it gives a right click.
 
 Tap the **keyboard icon** to type. **Live input** appears on the computer as you type. **Edit then send** lets you prepare the text on your phone and tap Send when it is ready. In this mode, Enter confirms on the computer; use Send to transfer the text.
 

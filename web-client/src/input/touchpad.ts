@@ -14,8 +14,6 @@ export class TouchpadHandler {
     private maxPointers = 0;
     private cancelled = false;
     private mode: ControlMode = 'computer';
-    private pendingTap: { x: number; y: number; time: number } | null = null;
-    private tapTimer: number | null = null;
     private accumulatorX = 0;
     private accumulatorY = 0;
     private scrollAccumulatorX = 0;
@@ -57,14 +55,7 @@ export class TouchpadHandler {
         window.addEventListener('pagehide', () => this.resetState());
     }
 
-    private clearTap() {
-        if (this.tapTimer !== null) window.clearTimeout(this.tapTimer);
-        this.tapTimer = null;
-        this.pendingTap = null;
-    }
-
     public resetState() {
-        this.clearTap();
         // Release before clearing the drag flag, including interrupted gestures.
         if (this.isDragging) this.callbacks.onDrag(false);
         this.isDragging = false;
@@ -97,7 +88,6 @@ export class TouchpadHandler {
         this.maxPointers = Math.max(this.maxPointers, this.pointers.size);
         this.clearAccumulators();
         try { this.element.setPointerCapture(e.pointerId); } catch { /* Unsupported in tests. */ }
-        if (this.pointers.size > 1) this.clearTap();
         if (this.pointers.size === 3 && !this.cancelled) {
             this.isDragging = true;
             this.callbacks.onDrag(true);
@@ -141,11 +131,9 @@ export class TouchpadHandler {
     }
 
     private handlePointerUp(e: PointerEvent) {
-        const point = this.pointers.get(e.pointerId);
-        if (!point) return;
+        if (!this.pointers.has(e.pointerId)) return;
         if (e.type !== 'pointerup') {
             this.cancelled = true;
-            this.clearTap();
         }
         this.pointers.delete(e.pointerId);
         if (this.isDragging && this.pointers.size < 3) {
@@ -154,28 +142,8 @@ export class TouchpadHandler {
         }
         try { this.element.releasePointerCapture(e.pointerId); } catch { /* Capture may already be lost. */ }
         if (this.pointers.size === 0 && !this.cancelled && !this.hasMoved) {
-            if (this.maxPointers === 1) this.tap(point);
+            if (this.maxPointers === 1) this.callbacks.onClick(1);
             else if (this.maxPointers === 2) this.callbacks.onClick(2);
         }
-    }
-
-    private tap(point: { x: number; y: number }) {
-        if (this.mode === 'computer') { this.callbacks.onClick(1); return; }
-        const now = performance.now();
-        if (this.pendingTap && now - this.pendingTap.time < 280
-            && Math.hypot(point.x - this.pendingTap.x, point.y - this.pendingTap.y) < 28) {
-            this.clearTap();
-            this.callbacks.onClick(2);
-            return;
-        }
-        if (this.pendingTap) {
-            this.clearTap();
-            this.callbacks.onClick(1);
-        }
-        this.pendingTap = { ...point, time: now };
-        this.tapTimer = window.setTimeout(() => {
-            this.clearTap();
-            this.callbacks.onClick(1);
-        }, 280);
     }
 }
