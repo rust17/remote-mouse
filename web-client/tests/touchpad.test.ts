@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TouchpadHandler } from '../src/input/touchpad';
 
 describe('TouchpadHandler', () => {
@@ -21,6 +21,12 @@ describe('TouchpadHandler', () => {
         };
 
         handler = new TouchpadHandler(element, callbacks);
+    });
+
+    afterEach(() => {
+        handler.resetState();
+        vi.useRealTimers();
+        vi.restoreAllMocks();
     });
 
     // Helper to create events
@@ -132,5 +138,66 @@ describe('TouchpadHandler', () => {
             expect(preventSpy).toHaveBeenCalled();
             expect(stopSpy).toHaveBeenCalled();
         });
+    });
+
+    it('TV double tap sends only one right click; single tap waits for the double-tap window', () => {
+        vi.useFakeTimers();
+        handler.setMode('tv');
+        const tap = () => {
+            element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        };
+        tap();
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(100); tap(); vi.advanceTimersByTime(300);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(2);
+        callbacks.onClick.mockClear();
+        tap(); vi.advanceTimersByTime(280);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+    });
+
+    it('switching modes cancels a pending TV tap and releases dragging', () => {
+        vi.useFakeTimers();
+        handler.setMode('tv');
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        handler.setMode('computer'); vi.advanceTimersByTime(300);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        handler.setMode('tv');
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+    });
+
+    it('three-finger release never becomes a right or left click', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        for (const id of [3, 2, 1]) element.dispatchEvent(createEvent('pointerup', id, 100, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+    });
+
+    it('cancelling one finger prevents clicks from the remaining fingers', () => {
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 2, 110, 100));
+        element.dispatchEvent(createEvent('pointercancel', 2, 110, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+    });
+
+    it('page hiding releases the remote mouse button and stops subsequent movement', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+        document.dispatchEvent(new Event('visibilitychange'));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+        expect(element.releasePointerCapture).toHaveBeenCalledTimes(3);
+    });
+
+    it('losing pointer capture releases dragging without synthesizing clicks', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        element.dispatchEvent(createEvent('lostpointercapture', 3, 100, 100));
+        for (const id of [2, 1]) element.dispatchEvent(createEvent('pointerup', id, 100, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
     });
 });

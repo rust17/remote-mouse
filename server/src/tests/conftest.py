@@ -1,8 +1,8 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 from server.services.web import create_app
-from server.services.mdns import MDNSResponder
 
 
 @pytest.fixture
@@ -31,7 +31,8 @@ def mock_socket():
 def client():
     """Create a TestClient for the FastAPI app."""
     app = create_app()
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture

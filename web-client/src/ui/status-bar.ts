@@ -28,8 +28,9 @@ export class StatusBar {
         this.textEl.textContent = i18n.t(this.currentKey as any);
         // Also set as data-i18n for reactive updates from i18n.updateDOM()
         this.textEl.setAttribute('data-i18n', this.currentKey);
+        this.indicatorEl.setAttribute('aria-label', this.textEl.textContent);
+        this.indicatorEl.setAttribute('data-i18n-aria', this.currentKey);
     }
 }
-
 
 

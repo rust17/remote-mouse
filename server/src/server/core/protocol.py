@@ -1,11 +1,12 @@
 import struct
-import pyautogui
-import logging
-import pyperclip
 import sys
 import time
 from contextlib import ExitStack
+from dataclasses import dataclass
+from enum import IntEnum
 
+import pyautogui
+import pyperclip
 from loguru import logger
 
 # 禁用 PyAutoGUI 的故障保险
@@ -19,6 +20,37 @@ OP_SCROLL = 0x03
 OP_DRAG = 0x04
 OP_TEXT = 0x05
 OP_KEY_ACTION = 0x06
+OP_MEDIA = 0x07
+OP_MEDIA_QUERY = 0x08
+
+
+class MediaAction(IntEnum):
+    REWIND = 1
+    PLAY_PAUSE = 2
+    FORWARD = 3
+    VOLUME_DOWN = 4
+    MUTE = 5
+    VOLUME_UP = 6
+    FULLSCREEN = 7
+
+
+@dataclass(frozen=True)
+class MediaCommand:
+    action: MediaAction
+    request_id: int
+
+
+@dataclass(frozen=True)
+class MediaQuery:
+    pass
+
+
+def decode_media_command(data: bytes) -> MediaCommand | MediaQuery:
+    if data == bytes([OP_MEDIA_QUERY]):
+        return MediaQuery()
+    if len(data) != 6 or data[0] != OP_MEDIA:
+        raise ValueError("Invalid media packet length or opcode")
+    return MediaCommand(MediaAction(data[1]), struct.unpack(">I", data[2:6])[0])
 
 
 def get_modifiers_list(mask: int):
@@ -46,21 +78,26 @@ def get_modifiers_list(mask: int):
 
 def process_binary_command(data: bytes):
     if not data:
-        return
+        return False
 
     opcode = data[0]
+
+    # Media commands are decoded here and dispatched by the async service to
+    # the input or audio worker; they must not become arbitrary key names.
+    if opcode in (OP_MEDIA, OP_MEDIA_QUERY):
+        return decode_media_command(data)
 
     try:
         if opcode == OP_MOVE:
             if len(data) < 5:
-                return
+                return False
             dx, dy = struct.unpack(">hh", data[1:5])
             pyautogui.moveRel(dx, dy)
 
         elif opcode == OP_CLICK:
             # [OpCode] [Button] [ModifierMask]
             if len(data) < 2:
-                return
+                return False
 
             button_code = data[1]
             button = "left" if button_code == 0x01 else "right"
@@ -78,7 +115,7 @@ def process_binary_command(data: bytes):
 
         elif opcode == OP_SCROLL:
             if len(data) < 5:
-                return
+                return False
             # aiortc/pyautogui scroll might need adjustment
             # pyautogui.scroll(clicks, x, y) - vertical
             # hscroll for horizontal if available
@@ -90,7 +127,7 @@ def process_binary_command(data: bytes):
 
         elif opcode == OP_DRAG:
             if len(data) < 2:
-                return
+                return False
             state = data[1]
             if state == 0x01:
                 pyautogui.mouseDown(button="left")
@@ -134,10 +171,15 @@ def process_binary_command(data: bytes):
         elif opcode == OP_KEY_ACTION:
             # [OpCode] [ModifierMask] [KeyName: UTF8]
             if len(data) < 2:
-                return
+                return False
 
             mask = data[1]
             key_name = data[2:].decode("utf-8")
+
+            # Semantic shortcut: the phone's OS does not identify the controlled computer's OS.
+            if key_name == "select_all":
+                pyautogui.hotkey("command" if sys.platform == "darwin" else "ctrl", "a")
+                return True
 
             modifiers = get_modifiers_list(mask)
 
@@ -154,5 +196,10 @@ def process_binary_command(data: bytes):
                     stack.enter_context(pyautogui.hold(key))
                 pyautogui.press(key_name)
 
+        else:
+            return False
+        return True
+
     except Exception as e:
         logger.error(f"Error processing opcode {opcode}: {e}")
+        return False

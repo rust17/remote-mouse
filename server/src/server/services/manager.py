@@ -1,7 +1,7 @@
 import threading
+
 import uvicorn
 from loguru import logger
-
 from server.services.mdns import MDNSResponder
 from server.services.web import create_app
 
@@ -65,7 +65,8 @@ class ServiceManager:
         if self.server:
             self.server.should_exit = True
             if self.server_thread and self.server_thread.is_alive():
-                self.server_thread.join(timeout=5)
+                # Wait for the app lifespan to release input and finish its workers.
+                self.server_thread.join()
             self.server = None
             self.server_thread = None
 

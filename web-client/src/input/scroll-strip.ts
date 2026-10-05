@@ -40,11 +40,17 @@ export class ScrollStripHandler {
         this.element.addEventListener('pointermove', this.handlePointerMove.bind(this));
         this.element.addEventListener('pointerup', this.handlePointerUp.bind(this));
         this.element.addEventListener('pointercancel', this.handlePointerUp.bind(this));
+        this.element.addEventListener('lostpointercapture', this.handlePointerUp.bind(this));
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.resetState();
+        });
+        window.addEventListener('pagehide', () => this.resetState());
     }
 
     private handlePointerDown(e: PointerEvent) {
         // Stop propagation so the parent touchpad handler doesn't steal capture
         e.stopPropagation();
+        e.preventDefault();
 
         if (this.activePointerId !== null) return;
 
@@ -81,12 +87,17 @@ export class ScrollStripHandler {
 
     private handlePointerUp(e: PointerEvent) {
         if (this.activePointerId !== e.pointerId) return;
+        this.resetState();
+    }
 
+    public resetState() {
+        const id = this.activePointerId;
         this.activePointerId = null;
+        this.accumulatorY = 0;
         this.element.classList.remove('active');
-
+        if (id === null) return;
         try {
-            this.element.releasePointerCapture(e.pointerId);
+            this.element.releasePointerCapture(id);
         } catch (err) {
             // ignore
         }

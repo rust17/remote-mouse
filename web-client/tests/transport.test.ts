@@ -10,6 +10,7 @@ class MockWebSocket {
     static CLOSED = 3;
 
     static instances: MockWebSocket[] = [];
+    onmessage: ((event: { data: unknown }) => void) | null = null;
     onopen: (() => void) | null = null;
     onclose: (() => void) | null = null;
     onerror: ((err: any) => void) | null = null;
@@ -96,12 +97,32 @@ describe('Transport', () => {
         const data = new ArrayBuffer(8);
 
         // Not open yet
-        transport.send(data);
+        expect(transport.send(data)).toBe(false);
         expect(ws.send).not.toHaveBeenCalled();
 
         // Open
         ws.open();
-        transport.send(data);
+        expect(transport.send(data)).toBe(true);
         expect(ws.send).toHaveBeenCalledWith(data);
     });
+    it('ignores events from obsolete sockets and prevents reconnect after disconnect', () => {
+        const onMessage = vi.fn();
+        transport = new Transport({ onStateChange, onMessage });
+        transport.connect('ws://localhost/ws');
+        const old = MockWebSocket.instances[0];
+        old.open();
+        transport.connect('ws://localhost/ws');
+        const current = MockWebSocket.instances[1];
+        current.open();
+        old.onmessage?.({ data: 'old' });
+        old.onclose?.();
+        old.onopen?.();
+        current.onmessage?.({ data: 'new' });
+        expect(onMessage).toHaveBeenCalledExactlyOnceWith('new');
+        transport.disconnect();
+        current.onmessage?.({ data: 'closed' });
+        vi.advanceTimersByTime(6000);
+        expect(MockWebSocket.instances).toHaveLength(2);
+    });
+
 });

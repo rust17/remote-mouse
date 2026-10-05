@@ -81,75 +81,65 @@ html.keyboard-open, body.keyboard-open {
 }
 
 /* --- Status Bar --- */
+#pwa-top-edge { display: none; }
+/* Experimental standalone top-edge backing for the iOS 27 system blur. */
+.ios-standalone #pwa-top-edge {
+  display: block;
+  position: fixed;
+  inset: 0 0 auto;
+  height: 16px;
+  background: var(--bg-color);
+  pointer-events: none;
+  z-index: 11;
+}
+.ios-standalone #status-bar {
+  top: calc(max(10px, env(safe-area-inset-top)) + 16px);
+}
 #status-bar {
   position: absolute;
-  top: 20px;
+  top: max(10px, env(safe-area-inset-top));
   left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
   pointer-events: none;
   z-index: 10;
 }
 
-#status-indicator {
-  background: var(--status-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--status-border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+/* Connection feedback follows the mode capsule outline without moving its controls. */
+#mode-switch {
+  position: relative;
+  pointer-events: auto;
+  --connection-color: var(--status-yellow);
+  --connection-glow: rgba(234, 179, 8, .15);
 }
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--status-yellow);
-  box-shadow: 0 0 8px var(--status-yellow);
-  transition: background-color 0.3s, box-shadow 0.3s;
+#mode-switch::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid var(--connection-color);
+  box-shadow: 0 0 10px var(--connection-glow);
+  pointer-events: none;
+  opacity: .5;
+  animation: connection-breathe 3.6s infinite ease-in-out;
 }
-
-/* Status States */
-#status-indicator.status-connected {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: none;
-  box-shadow: none;
-  padding: 0;
+#status-indicator.status-connected + #mode-switch {
+  --connection-color: var(--status-green);
+  --connection-glow: rgba(34, 197, 94, .15);
 }
-
-#status-indicator.status-connected .status-dot {
-  background-color: var(--status-green);
-  box-shadow: 0 0 8px var(--status-green);
-  animation: breathe 3s infinite ease-in-out;
+#status-indicator.status-disconnected + #mode-switch {
+  --connection-color: var(--status-red);
+  --connection-glow: rgba(239, 68, 68, .12);
 }
-
-#status-indicator.status-connected .status-text {
-  display: none;
+#status-indicator.status-disconnected + #mode-switch::after {
+  animation: none;
+  opacity: .65;
 }
-
-#status-indicator.status-disconnected .status-dot {
-  background-color: var(--status-red);
-  box-shadow: 0 0 8px var(--status-red);
-}
-
-.status-text {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  letter-spacing: 0.5px;
-}
-
-@keyframes breathe {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(0.9); }
+@keyframes connection-breathe {
+  0%, 100% { opacity: .25; }
+  50% { opacity: .8; }
 }
 
 /* --- Scroll Strip --- */
@@ -213,10 +203,10 @@ html.keyboard-open, body.keyboard-open {
 
 /* --- Function Panel --- */
 #fn-panel {
-  padding: 12px 16px 20px; /* Extra bottom padding for safe area */
+  padding: 12px 16px max(20px, env(safe-area-inset-bottom));
   background: var(--panel-bg);
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   flex-shrink: 0;
   position: relative;
@@ -272,9 +262,8 @@ html.keyboard-open, body.keyboard-open {
 /* --- FAB Toolbar (Segmented Capsule) --- */
 #toolbar-fab {
   position: absolute;
-  bottom: 100%; /* Float above the top of its parent (#fn-panel) */
+  bottom: 20px;
   right: 15px;
-  margin-bottom: 20px; /* Fixed distance to fn-panel top edge */
   z-index: 20;
 }
 
@@ -305,6 +294,8 @@ html.keyboard-open, body.keyboard-open {
   border-radius: 12px; /* Soft square like fn-keys */
   width: 40px; /* Smaller touch target */
   height: 40px;
+  min-width: 40px;
+  padding: 0;
   position: relative;
 }
 
@@ -350,7 +341,7 @@ html.keyboard-open, body.keyboard-open {
 
 .capsule-btn.main-action:active,
 .capsule-btn.main-action.active {
-  background: rgba(59, 130, 246, 0.15); /* Subtle blue bg on active */
+  background: var(--touchpad-bg-center);
   color: var(--accent-color);
   transform: scale(0.94);
 }
@@ -359,8 +350,9 @@ html.keyboard-open, body.keyboard-open {
   position: fixed;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
+  font-size: 16px;
   opacity: 0;
   z-index: -1;
   pointer-events: none;
@@ -374,7 +366,7 @@ html.keyboard-open, body.keyboard-open {
 
 /* Optimization for keyboard open state */
 .keyboard-open #status-bar {
-  display: none;
+  display: flex;
 }
 
 .keyboard-open #fn-panel {
@@ -395,7 +387,8 @@ html.keyboard-open, body.keyboard-open {
 
 /* --- Modal --- */
 .modal {
-  position: fixed;
+  position: absolute;
+  padding: 20px 0;
   top: 0;
   left: 0;
   width: 100%;
@@ -527,9 +520,14 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 .switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: pointer;
 }
 
 /* iOS direct-tap haptics: opacity preserves native rendering and activation. */
@@ -566,6 +564,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 .slider {
   position: absolute;
+  pointer-events: none;
   cursor: pointer;
   top: 0;
   left: 0;
@@ -652,10 +651,6 @@ input:checked + .slider:before {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.light-mode #status-indicator {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
 .light-mode .fn-btn {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
 }
@@ -713,3 +708,168 @@ input:checked + .slider:before {
 .hidden {
     display: none !important;
 }
+
+/* Shared surface, with controls selected by scene. */
+[hidden] { display: none !important; }
+:root { color-scheme: dark; }
+.light-mode { color-scheme: light; }
+#app { padding-top: env(safe-area-inset-top); }
+#mode-switch {
+  padding: 3px;
+  border-radius: 18px;
+  box-shadow: 0 5px 16px var(--fab-shadow), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+#mode-switch .capsule-btn {
+  width: 46px;
+  height: 30px;
+  border-radius: 11px;
+}
+#mode-switch .capsule-btn svg {
+  width: 18px;
+  height: 18px;
+}
+#mode-switch [aria-pressed="true"] {
+  color: var(--accent-color);
+}
+#mode-switch .capsule-btn,
+#mode-switch .capsule-btn:active,
+#mode-switch .native-haptic-target:active > button {
+  background: transparent;
+}
+#mode-switch .capsule-btn[aria-pressed="true"],
+#mode-switch .native-haptic-target:active > .capsule-btn[aria-pressed="true"] {
+  background: var(--touchpad-bg-center);
+}
+#touch-zone { flex: 1; min-height: 84px; position: relative; }
+#touchpad { position: absolute; inset: 0; height: 100%; }
+#controls-area { flex-shrink: 0; background: var(--panel-bg); }
+#app.dragging #touch-zone { box-shadow: inset 0 0 0 1px rgba(59, 130, 246, .4); }
+.keyboard-open #toolbar-fab { bottom: 10px; }
+#media-panel { padding: 12px 16px max(16px, env(safe-area-inset-bottom)); }
+.media-grid { display: grid; grid-template-columns: 1fr 1.22fr 1fr; gap: 12px; }
+.media-btn, .option-btn {
+  display: flex; align-items: center; justify-content: center;
+  height: 48px; min-width: 0; width: 100%; padding: 0 8px;
+  color: var(--text-secondary); background: var(--fn-btn-bg);
+  border: 1px solid var(--fn-btn-border); border-radius: 12px;
+  font: inherit; font-size: 13px;
+}
+button:disabled { opacity: .45; cursor: default; }
+#input-panel { padding: 8px 16px max(10px, env(safe-area-inset-bottom)); }
+#tv-input-keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+#app[data-mode="computer"] #tv-input-keys { display: none; }
+#app[data-mode="computer"] #input-panel:not(.draft-mode) { padding: 0; }
+#app[data-mode="tv"].typing .media-btn,
+#app[data-mode="tv"].typing #tv-input-keys .fn-btn { height: 40px; font-size: 13px; }
+#app[data-mode="tv"].typing #media-panel { padding-bottom: 10px; }
+#composer {
+  display: flex; align-items: center; gap: 8px; padding: 3px 4px 3px 12px;
+  border: 1px solid var(--btn-border); border-radius: 12px; background: var(--btn-bg);
+}
+#draft-input {
+  width: 0; flex: 1; min-width: 0; height: 44px;
+  background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 16px;
+  user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; touch-action: auto;
+}
+#btn-send {
+  display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  background: transparent; border: 0; color: var(--accent-color); border-radius: 50%; cursor: pointer;
+}
+#input-feedback:empty { display: none; }
+#input-feedback { color: var(--status-red); font-size: 12px; margin-top: 8px; }
+.input-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.option-btn { cursor: pointer; }
+.option-btn[aria-pressed="true"] { color: var(--accent-color); border-color: var(--accent-color); background: rgba(59, 130, 246, .15); }
+.native-haptic-target > .option-btn { width: 100%; }
+.native-haptic-target:has(> [hidden]) { display: none; }
+.modal-content { max-height: 100%; display: flex; flex-direction: column; }
+.modal-header { flex-shrink: 0; }
+.modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.setting-item input[type="range"] { touch-action: pan-x; }
+#lang-select { min-height: 40px; padding: 4px 8px; background: var(--panel-bg); color: var(--text-primary); border: 1px solid var(--btn-border); border-radius: 8px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.light-mode #rate-monitor { background: rgba(255, 255, 255, .85); }
+@media (max-height: 560px) {
+  #toolbar-fab { bottom: 10px; }
+  #media-panel, #fn-panel { padding-top: 8px; }
+  #media-panel { padding-bottom: 10px; }
+  .media-grid { gap: 8px; }
+  #input-panel { padding-top: 6px; padding-bottom: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+.media-btn.active { color: var(--accent-color); background: rgba(59, 130, 246, .15); }
+.media-grid > .native-haptic-target { width: 100%; }
+.media-grid .native-haptic-target > .media-btn { width: 100%; }
+.native-haptic-target:has(> button[hidden]) { display: none; }
+
+/* Keep media feedback available to assistive technology without taking UI space. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Temporary volume HUD; pointer events pass through to the shared touchpad. */
+.volume-toast {
+  position: absolute;
+  z-index: 40;
+  top: 50%;
+  left: max(18px, env(safe-area-inset-left));
+  width: 28px;
+  height: min(156px, calc(100% - 24px));
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-10px, -50%) scale(.94);
+  transition: opacity .18s ease, transform .22s ease, visibility .18s;
+}
+.volume-toast.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%) scale(1);
+}
+.volume-toast-meter {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(120, 124, 134, .32);
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.volume-toast-fill {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--volume-level, 0%);
+  background: rgba(255, 255, 255, .96);
+  transition: height .16s ease;
+}
+.volume-toast-icon {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%);
+  color: white;
+  mix-blend-mode: difference;
+}
+.volume-toast-muted { display: none; }
+.volume-toast[data-volume-level="muted"] .volume-toast-muted { display: initial; }
+.volume-toast[data-volume-level="muted"] .volume-toast-wave-low,
+.volume-toast[data-volume-level="muted"] .volume-toast-wave-high,
+.volume-toast[data-volume-level="off"] .volume-toast-wave-low,
+.volume-toast[data-volume-level="off"] .volume-toast-wave-high,
+.volume-toast[data-volume-level="low"] .volume-toast-wave-high { display: none; }

@@ -7,7 +7,7 @@ export function installNativeHapticTargets(root: HTMLElement) {
     if (!('switch' in document.createElement('input'))) return;
 
     root.querySelectorAll<HTMLButtonElement>('button').forEach(button => {
-        if (button.closest('.native-haptic-target')) return;
+        if (button.disabled || button.closest('.native-haptic-target')) return;
 
         // Keep the button for keyboard/accessibility activation. The native
         // control is its sibling, avoiding nested interactive elements.

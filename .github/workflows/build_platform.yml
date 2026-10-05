@@ -46,7 +46,7 @@ jobs:
         if: inputs.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth libx11-6 libxtst6 xclip
+          sudo apt-get install -y xvfb xauth libx11-6 libxtst6 xclip pulseaudio-utils
           touch "$HOME/.Xauthority"
       - name: Install Inno Setup
         if: inputs.platform == 'windows'
@@ -81,7 +81,7 @@ jobs:
             uv run --frozen --project server pytest server/src/tests packaging/tests
           fi
       - name: Check packaging and changed server files
-        run: uv run --frozen --project server ruff check --config server/pyproject.toml packaging server/src/server/config.py server/src/server/services/mdns.py server/src/tests/test_config.py server/src/tests/test_web_service.py server/src/tests/test_mdns.py server/src/tests/test_connection.py
+        run: uv run --frozen --project server ruff check --config server/pyproject.toml packaging server/src/server/main.py server/src/server/services/manager.py server/src/tests/test_main.py server/src/server/core/protocol.py server/src/server/services/audio.py server/src/server/services/media.py server/src/server/services/mouse.py server/src/server/services/web.py server/src/tests/test_protocol.py server/src/tests/test_media.py server/src/tests/test_mouse.py server/src/tests/test_audio.py server/src/server/config.py server/src/server/services/mdns.py server/src/tests/test_config.py server/src/tests/test_web_service.py server/src/tests/test_mdns.py server/src/tests/test_connection.py
       - name: Validate shipped artifacts
         env:
           BUILD_PLATFORM: ${{ inputs.platform }}
