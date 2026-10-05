@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Remote Mouse">
+  <meta name="theme-color" content="#0f1115">
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <title>Remote Mouse · 统一界面原型 v8</title>
+  <style>
+    :root { color-scheme:dark; --bg:#0f1115; --panel:#16191f; --blue:#3b82f6; --text:#e2e8f0; --muted:#94a3b8; --key:rgba(45,50,60,.3); --border:rgba(255,255,255,.12); }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body { margin:0; min-height:100%; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; background:#08090c; color:var(--text); }
+    button,input { font:inherit; }
+    button { min-width:44px; min-height:44px; border:0; cursor:pointer; color:var(--muted); background:transparent; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
+    button:focus-visible,input:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+    [hidden] { display:none!important; }
+    .stage { display:flex; align-items:center; justify-content:center; min-height:100dvh; padding:32px; }
+    #app { width:390px; height:min(844px,calc(100dvh - 64px)); background:var(--bg); border-radius:28px; overflow:hidden; display:flex; flex-direction:column; position:relative; container-type:size; }
+    .symbols { position:absolute; width:0; height:0; overflow:hidden; }
+    .icon { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    header { height:66px; flex-shrink:0; display:flex; justify-content:center; align-items:center; z-index:2; }
+    .connection { display:flex; align-items:center; gap:8px; }
+    .connection-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e66; }
+    .mode-switch { display:flex; gap:2px; padding:4px; border-radius:20px; background:rgba(30,35,45,.4); border:1px solid rgba(255,255,255,.15); box-shadow:0 8px 24px #00000040,inset 0 1px #ffffff19; backdrop-filter:blur(25px) saturate(180%); -webkit-backdrop-filter:blur(25px) saturate(180%); }
+    .mode-switch button { display:flex; align-items:center; justify-content:center; width:40px; height:40px; min-height:40px; min-width:40px; padding:0; border-radius:14px; font-size:12px; font-weight:500; color:var(--muted); }
+    .mode-switch .icon { width:20px; height:20px; stroke-width:2; }
+    .mode-switch button[aria-pressed="true"] { color:var(--blue); background:#3b82f626; box-shadow:inset 0 1px #ffffff08; }
+    .mode-switch button:active { transform:scale(.96); }
+    .native-target:has(> button[hidden]) { display:none; }
+    .settings { position:absolute; inset:0; z-index:5; background:#0009; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px; }
+    .settings-card { width:100%; max-width:320px; max-height:100%; display:flex; flex-direction:column; padding:20px; border-radius:16px; border:1px solid #ffffff19; background:var(--panel); box-shadow:0 10px 40px #0008; }
+    .settings-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-shrink:0; }
+    .settings-heading h2 { font-size:18px; margin:0; font-weight:600; }
+    .setting-label { display:flex; align-items:center; justify-content:space-between; font-size:14px; color:var(--muted); margin:0; }
+    .settings-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; }
+    .setting-item { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+    .setting-item:last-child { margin-bottom:0; }
+    .setting-value { color:var(--blue); font-weight:600; }
+    #settings-close { width:40px; height:40px; min-width:40px; min-height:40px; padding:4px; display:flex; align-items:center; justify-content:center; }
+    #settings-close .icon { width:20px; height:20px; stroke-width:2; }
+    input[type="range"] { appearance:none; -webkit-appearance:none; width:100%; height:20px; margin:0; background:transparent; touch-action:pan-x; }
+    input[type="range"]::-webkit-slider-runnable-track { height:4px; border-radius:2px; background:rgba(255,255,255,.1); }
+    input[type="range"]::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--blue); margin-top:-8px; box-shadow:0 2px 6px #0005; }
+    input[type="range"]::-moz-range-track { height:4px; border-radius:2px; background:rgba(255,255,255,.1); }
+    input[type="range"]::-moz-range-thumb { width:20px; height:20px; border:0; border-radius:50%; background:var(--blue); }
+    .switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+    .switch input { position:absolute; inset:0; width:100%; height:100%; opacity:0; margin:0; z-index:1; cursor:pointer; }
+    .slider { position:absolute; inset:0; border-radius:24px; border:1px solid #2d3340; background:#232730; pointer-events:none; transition:.2s; }
+    .slider:before { content:""; position:absolute; left:2px; bottom:2px; width:18px; height:18px; border-radius:50%; background:var(--muted); box-shadow:0 1px 3px #0003; transition:.2s; }
+    .switch input:checked + .slider { background:var(--blue); border-color:var(--blue); }
+    .switch input:checked + .slider:before { transform:translateX(20px); background:white; }
+    .switch input:focus-visible + .slider { outline:2px solid var(--blue); outline-offset:3px; }
+    #lang-select { max-width:110px; color:var(--text); font:inherit; font-size:14px; background:var(--panel); border:1px solid var(--border); border-radius:8px; min-height:40px; padding:4px 8px; }
+    #rate-monitor { position:absolute; top:max(10px,env(safe-area-inset-top)); right:10px; z-index:3; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:#0f1115d9; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); color:var(--muted); font:11px monospace; pointer-events:none; }
+    #rate-monitor span { color:var(--blue); font-weight:600; }
+    .scroll-left #scroll-rail { left:0; right:auto; border-left:0; border-right:1px solid #ffffff06; }
+    .light-mode { color-scheme:light; --bg:#f8fafc; --panel:#fff; --text:#1e293b; --muted:#64748b; --key:rgba(255,255,255,.6); --border:rgba(0,0,0,.1); }
+    body.light-mode { background:#e2e8f0; }
+    .light-mode .tools,.light-mode .mode-switch { background:rgba(255,255,255,.8); border-color:rgba(0,0,0,.1); box-shadow:0 4px 12px #0000000d,inset 0 1px #ffffffcc; }
+    .light-mode #touch-zone { background-image:radial-gradient(ellipse at center,#e2e8f080,transparent 75%),repeating-linear-gradient(45deg,#00000002 0px,#00000002 1px,transparent 1px,transparent 10px); }
+    .light-mode .keycap { box-shadow:0 2px 5px #0000000d,inset 0 1px #ffffffcc; }
+    .light-mode #play { color:var(--blue); }
+    .light-mode .composer { background:#f1f5f9; }
+    .light-mode .settings { background:#0003; }
+    .light-mode .settings-card { border-color:var(--border); box-shadow:0 10px 40px #0000001a; }
+    .light-mode #scroll-rail { background:#00000008; border-color:#0000000d; }
+    .light-mode #scroll-rail:after { background:#00000019; }
+    .light-mode .tools-divider { background:#00000019; }
+    .light-mode input[type="range"]::-webkit-slider-runnable-track { background:#00000019; }
+    .light-mode input[type="range"]::-moz-range-track { background:#00000019; }
+    .light-mode .slider { background:#f1f5f9; border-color:#cbd5e1; }
+    .light-mode #rate-monitor { background:#ffffffd9; }
+    .input-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .input-options button { min-height:48px; font-size:12px; }
+    .live-input { position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; pointer-events:none; border:0; font-size:16px; }
+    #touch-zone { flex:1; min-height:84px; position:relative; background-image:radial-gradient(ellipse at 50% 38%,#1a1d2466,transparent 72%), repeating-linear-gradient(45deg,#ffffff02 0px,#ffffff02 1px,transparent 1px,transparent 10px); }
+    #pad { position:absolute; inset:0; touch-action:none; overflow:hidden; }
+    #scroll-rail { position:absolute; top:0; right:0; bottom:0; width:44px; background:#ffffff04; border-left:1px solid #ffffff06; touch-action:none; display:flex; justify-content:center; align-items:center; }
+    #scroll-rail:after { content:""; width:3px; height:36px; border-radius:4px; background:#ffffff19; }
+    #scroll-rail.active { background:#3b82f615; }
+    #scroll-rail.active:after { background:var(--blue); }
+    #touch-dot { position:absolute; width:12px; height:12px; border-radius:50%; background:#3b82f6aa; box-shadow:0 0 0 9px #3b82f614; opacity:0; pointer-events:none; }
+    #touch-dot.visible { opacity:1; }
+    .tools { position:absolute; bottom:20px; right:15px; display:flex; align-items:center; gap:2px; padding:4px; border-radius:20px; background:rgba(30,35,45,.4); border:1px solid rgba(255,255,255,.15); box-shadow:0 12px 32px #00000066,inset 0 1px #ffffff19; backdrop-filter:blur(25px) saturate(180%); -webkit-backdrop-filter:blur(25px) saturate(180%); }
+    .tools button { width:40px; height:40px; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:12px; padding:0; font-size:12px; }
+    .tools button:active,.tools .native-target:active > button { background:#ffffff0d; transform:scale(.94); }
+    .tools-divider { width:1px; height:16px; background:#ffffff19; margin:0 2px; }
+    .tools .icon { width:20px; height:20px; stroke-width:2; }
+    .typing #controls .keycap,.typing #input-panel .keycap { height:40px; min-height:40px; font-size:13px; }
+    #keyboard { color:var(--blue); }
+    #keyboard .icon { filter:drop-shadow(0 0 4px #3b82f655); }
+    .tools [aria-pressed="true"],#keyboard[aria-expanded="true"] { color:var(--blue); background:#3b82f626; }
+    #feedback { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+    #app.dragging #touch-zone { box-shadow:inset 0 0 0 1px #3b82f640; }
+    #input-panel { flex-shrink:0; padding:8px 16px 10px; background:var(--panel); border-top:1px solid #ffffff06; }
+    .composer { display:flex; align-items:center; gap:8px; padding:3px 4px 3px 12px; border-radius:12px; border:1px solid var(--border); background:#20252e; box-shadow:inset 0 1px #ffffff08; }
+    #draft { width:0; flex:1; min-width:0; min-height:44px; color:var(--text); background:transparent; border:0; font-size:16px; outline:none; }
+    #draft::placeholder { color:#778396; }
+    #send { display:flex; justify-content:center; align-items:center; color:var(--blue); padding:0; }
+    #send .icon { width:24px; height:24px; }
+    .typing #controls { padding-bottom:10px; }
+    #controls { flex-shrink:0; padding:16px 16px 20px; background:var(--panel); border-top:1px solid #ffffff06; }
+    .keycap { width:100%; border:1px solid var(--border); border-radius:12px; background:var(--key); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); box-shadow:inset 0 1px #ffffff0d; display:flex; align-items:center; justify-content:center; gap:8px; padding:0 8px; font-size:13px; }
+    .keycap:active,.native-target:active > .keycap { transform:translateY(1px); background:#ffffff20; border-color:#ffffff33; color:var(--text); }
+    .keycap[aria-pressed="true"] { color:var(--blue); background:#3b82f620; border-color:#3b82f670; }
+    .transport { display:grid; grid-template-columns:1fr 1.22fr 1fr; align-items:center; gap:12px; margin-bottom:14px; }
+    .transport .keycap { height:48px; min-height:48px; }
+    .transport .icon { width:23px; height:23px; }
+    #play { height:48px; min-height:48px; color:#69a3ff; background:linear-gradient(180deg,#3b82f61c,#3b82f60c); border-color:#3b82f64d; border-radius:12px; box-shadow:inset 0 1px #8db8ff19,0 3px 12px #0000001a; font-size:11px; }
+    #play .icon { width:22px; height:22px; }
+    .volume { display:grid; grid-template-columns:1fr 1.22fr 1fr; gap:12px; margin-bottom:0; }
+    .volume .keycap { height:48px; min-height:48px; }
+    #volume-value { font-size:12px; min-width:30px; font-variant-numeric:tabular-nums; }
+    .input-keys { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:8px; }
+    .input-keys .icon { width:22px; height:22px; stroke-width:2; }
+    .input-keys .keycap { height:48px; min-height:48px; font-size:14px; }
+    .input-keys button[data-action="enter"] { color:var(--text); }
+    .native-target { display:flex; position:relative; min-width:0; }
+    .native-switch { position:absolute; inset:0; width:100%; height:100%; margin:0; appearance:auto; -webkit-appearance:auto; opacity:0; cursor:pointer; clip-path:inset(0 round var(--radius,12px)); }
+    @container(max-height:560px) {
+      header { height:60px; }
+      #controls { padding-top:10px; padding-bottom:10px; }
+      .transport { margin-bottom:8px; gap:10px; }
+      .transport .icon,#play .icon { width:22px; height:22px; }
+      .volume { gap:10px; }
+      .tools { bottom:10px; }
+      #feedback { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+      #input-panel { padding-top:6px; padding-bottom:6px; }
+    }
+    @media(max-width:480px) {
+      .stage { padding:0; display:block; }
+      #app { width:100%; height:var(--viewport-height,100dvh); border-radius:0; padding-top:env(safe-area-inset-top); }
+      #controls { padding-bottom:max(16px,env(safe-area-inset-bottom)); }
+      .typing #input-panel { padding-bottom:max(8px,env(safe-area-inset-bottom)); }
+      .keyboard-open #controls { padding-bottom:8px; }
+      .keyboard-open #input-panel { padding-bottom:6px; }
+    }
+    @media(prefers-reduced-motion:no-preference) { button,#touch-dot,#scroll-rail { transition:background .15s,color .15s,transform .15s,opacity .15s; } }
+
+    #computer-keys { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; flex-shrink:0; padding:12px 16px 20px; background:var(--panel); }
+    #computer-keys .fn-btn { height:48px; min-height:48px; min-width:0; padding:0; font-size:14px; font-weight:500; }
+    #computer-keys .nav-key { font-size:16px; }
+    #computer-keys .action-key { background:rgba(42,46,56,.7); color:var(--text); }
+    #computer-keys .modifier[aria-pressed="true"] { background:#3b82f640; border-color:var(--blue); color:white; box-shadow:0 0 15px #3b82f666; }
+    .keyboard-open #computer-keys { padding-top:8px; padding-bottom:0; gap:8px; }
+    .keyboard-open #computer-keys .fn-btn { height:40px; min-height:40px; font-size:13px; }
+    .keyboard-open #computer-keys .fn-btn svg { width:12px; height:12px; }
+    .computer-mode .input-keys { display:none; }
+    .computer-mode #input-panel { border-top:0; }
+    .computer-mode #input-panel:not(.draft-mode) { padding:0; }
+    .computer-mode #scroll-rail { width:40px; }
+    .computer-mode header { position:absolute; top:0; width:100%; pointer-events:none; }
+    .computer-mode header .connection { pointer-events:auto; }
+    .computer-mode .tools #fullscreen { display:none; }
+    .light-mode #computer-keys .action-key { background:rgba(255,255,255,.6); }
+    .light-mode #computer-keys .modifier[aria-pressed="true"] { color:var(--blue); }
+    @media(max-width:480px) { #computer-keys { padding-bottom:max(20px,env(safe-area-inset-bottom)); } .keyboard-open #computer-keys { padding-bottom:0; } }
+  </style>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-computer" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="12" rx="2"/><path d="M2 20h20l-2-5H4l-2 5z"/></symbol>
+    <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 21l2-3m8 3-2-3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="4"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m11 5-8 7 8 7V5zm10 0-8 7 8 7V5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-forward" viewBox="0 0 24 24"><path d="m3 5 8 7-8 7V5zm10 0 8 7-8 7V5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5zM15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5zM16 9l5 6m0-6-5 6"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="6" y1="16" x2="6" y2="16"></line><line x1="10" y1="16" x2="10" y2="16"></line><line x1="14" y1="16" x2="14" y2="16"></line></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-enter" viewBox="0 0 24 24"><path d="M20 4v8H4m5-5-5 5 5 5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 17V7m-4 4 4-4 4 4" stroke="#e2e8f0"/></symbol>
+  </svg>
+  <main class="stage">
+    <div id="app" data-screen-label="沿用原版风格的 TV 模式">
+      <header><div class="connection"><span class="connection-dot" role="img" aria-label="演示连接"></span><div class="mode-switch" role="group" aria-label="操作模式">
+        <button id="mode-computer" data-mode="computer" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-computer"/></svg></button>
+        <button id="mode-tv" data-mode="tv" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-tv"/></svg></button>
+      </div></div></header>
+      <div id="rate-monitor" aria-label="速率显示" hidden><div>PPS: <span>0</span></div><div>BPS: <span>0</span></div></div>
+      <section id="touch-zone" aria-label="鼠标操作区">
+        <div id="pad" aria-label="演示触控板"><div id="touch-dot"></div><div id="scroll-rail" aria-label="单指滚动"></div></div>
+        <div id="feedback" role="status" aria-live="polite"></div>
+        <div class="tools" aria-label="鼠标与输入工具">
+          <button id="settings-open" aria-label="打开设置"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></button>
+          <button id="fullscreen" aria-label="进入全屏" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-fullscreen"/></svg></button>
+          <div class="tools-divider"></div>
+          <button id="keyboard" aria-label="展开键盘" aria-expanded="false" aria-controls="input-panel"><svg class="icon" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
+        </div>
+      </section>
+
+      <footer id="controls" aria-label="TV 控制">
+        <div class="transport">
+          <button class="keycap" data-action="back" aria-label="快退"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg></button>
+          <button class="keycap" id="play" aria-label="暂停"><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button>
+          <button class="keycap" data-action="forward" aria-label="快进"><svg class="icon" aria-hidden="true"><use href="#i-forward"/></svg></button>
+        </div>
+        <div class="volume">
+          <button class="keycap" data-action="volume-down" aria-label="降低音量"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+          <button class="keycap" id="mute" aria-label="静音，当前音量 50%" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-sound"/></svg><span id="volume-value">50%</span></button>
+          <button class="keycap" data-action="volume-up" aria-label="提高音量"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        </div>
+
+      </footer>
+      <div id="computer-keys" aria-label="Computer function keys" hidden>
+        <button class="keycap fn-btn" data-key="esc" aria-label="Esc">Esc</button>
+        <button class="keycap fn-btn" data-key="tab" aria-label="Tab">⇥</button>
+        <button class="keycap fn-btn action-key" data-key="enter" aria-label="Enter">↵</button>
+        <button class="keycap fn-btn modifier" data-modifier="alt" aria-pressed="false" aria-label="Alt">Alt</button>
+        <button class="keycap fn-btn nav-key" data-key="up" aria-label="Up">↑</button>
+        <button class="keycap fn-btn action-key" data-key="backspace" aria-label="Backspace">⌫</button>
+        <button class="keycap fn-btn modifier" data-modifier="ctrl" aria-pressed="false" aria-label="Ctrl">Ctrl</button>
+        <button class="keycap fn-btn modifier" data-modifier="shift" aria-pressed="false" aria-label="Shift">⇧</button>
+        <button class="keycap fn-btn modifier" data-modifier="win" aria-pressed="false" aria-label="Win">
+            <svg width="14" height="14" viewBox="0 0 88 88" fill="currentColor"><path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48l-.023-33.59zm7.062-39.24l44.93-6.6.155 41.838-45.028.243zm45.105 39.52l.142 41.742-45.093-6.66-.183-39.317z"/></svg>
+        </button>
+        <button class="keycap fn-btn nav-key" data-key="left" aria-label="Left">←</button>
+        <button class="keycap fn-btn nav-key" data-key="down" aria-label="Down">↓</button>
+        <button class="keycap fn-btn nav-key" data-key="right" aria-label="Right">→</button>
+      </div>
+      <div id="input-panel" hidden><div class="input-keys" aria-label="电脑输入按键"><button class="keycap" data-action="enter" aria-label="确认（Enter）"><svg class="icon" aria-hidden="true"><use href="#i-enter"/></svg></button><button class="keycap" data-action="backspace" aria-label="退格">⌫</button><button class="keycap" data-action="select-all" data-ui="selectAll" aria-label="全选">全选</button><button class="keycap" data-action="escape" aria-label="取消（Esc）">Esc</button></div><input id="live-input" class="live-input" type="text" aria-label="实时输入" enterkeyhint="done" autocomplete="off" autocapitalize="off"><div class="composer" id="composer" hidden><input id="draft" type="text" placeholder="输入文字" aria-label="待发送文字" enterkeyhint="enter" autocomplete="off"><button id="send" aria-label="发送文字"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button></div></div>
+      <div class="settings" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <div class="settings-card">
+          <div class="settings-heading"><h2 id="settings-title" data-ui="settings">设置</h2><button id="settings-close" aria-label="关闭设置"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+          <div class="settings-body">
+            <div class="setting-item">
+              <label class="setting-label" for="sensitivity-slider"><span data-ui="mouseSensitivity">鼠标灵敏度</span><span class="setting-value" id="sensitivity-value">2.0</span></label>
+              <input type="range" id="sensitivity-slider" min="0.5" max="10" step="0.1" value="2">
+            </div>
+            <div class="setting-item">
+              <label class="setting-label" for="scroll-sensitivity-slider"><span data-ui="scrollSensitivity">滚动灵敏度</span><span class="setting-value" id="scroll-sensitivity-value">1.0</span></label>
+              <input type="range" id="scroll-sensitivity-slider" min="0.1" max="10" step="0.1" value="1">
+            </div>
+            <div class="setting-item">
+              <p class="setting-label" data-ui="inputMode">输入方式</p>
+              <div class="input-options"><button class="keycap" data-input-mode="realtime" data-ui="realtime" aria-pressed="true">实时输入</button><button class="keycap" data-input-mode="draft" data-ui="draft" aria-pressed="false">编辑后发送</button></div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-label"><span id="theme-label" data-ui="lightMode">亮色模式</span><label class="switch"><input type="checkbox" id="theme-toggle" aria-labelledby="theme-label"><span class="slider"></span></label></div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-label"><span id="scroll-pos-label" data-ui="scrollRight">滚动条居右</span><label class="switch"><input type="checkbox" id="scroll-pos-toggle" aria-labelledby="scroll-pos-label"><span class="slider"></span></label></div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-label"><span id="rate-label" data-ui="rateMonitor">速率监控器</span><label class="switch"><input type="checkbox" id="rate-monitor-toggle" aria-labelledby="rate-label"><span class="slider"></span></label></div>
+            </div>
+            <div class="setting-item">
+              <label class="setting-label" for="lang-select"><span data-ui="language">语言</span><select id="lang-select"><option value="zh">中文</option><option value="en">English</option></select></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script>
+    // Interaction prototype only. No transport or actual computer input is used.
+    const get=id=>document.getElementById(id);
+    const state={playing:true,volume:50,muted:false,drag:false,typing:false,fullscreen:false,remote:new URLSearchParams(location.search).get('mode')!=='computer',inputMode:localStorage.getItem('remote-mouse-prototype-input-mode')==='draft'?'draft':'realtime'};
+    let activeModifiers=0;
+    const modifierBits={ctrl:1,shift:2,alt:4,win:8};
+    function resetModifiers(){activeModifiers=0;document.querySelectorAll('[data-modifier]').forEach(button=>button.setAttribute('aria-pressed','false'));}
+    function computerKey(key){
+      const prefix=Object.entries(modifierBits).filter(([,bit])=>activeModifiers&bit).map(([name])=>name.toUpperCase());
+      notify([...prefix,key].join(' + '));resetModifiers();keepInput();
+    }
+    document.querySelectorAll('#computer-keys .fn-btn').forEach(button=>button.addEventListener('click',()=>{
+      if(button.dataset.modifier){activeModifiers^=modifierBits[button.dataset.modifier];button.setAttribute('aria-pressed',String(!!(activeModifiers&modifierBits[button.dataset.modifier])));keepInput();}
+      else computerKey(button.dataset.key);
+    }));
+    // Keep the phone keyboard open while function keys are tapped.
+    document.querySelectorAll('#computer-keys .fn-btn,[data-action]').forEach(button=>button.addEventListener('pointerdown',event=>{if(state.typing&&!event.target.classList.contains('native-switch'))event.preventDefault();}));
+    const preferenceKey='remote-mouse-prototype-settings';
+    const defaults={sensitivity:2,scrollSensitivity:1,light:false,scrollRight:false,rate:false,language:'zh'};
+    let saved={};try{saved=JSON.parse(localStorage.getItem(preferenceKey)||'{}');}catch{}
+    const prefs={...defaults,...saved};
+    prefs.sensitivity=Math.max(.5,Math.min(10,Number(prefs.sensitivity)||2));
+    prefs.scrollSensitivity=Math.max(.1,Math.min(10,Number(prefs.scrollSensitivity)||1));
+    prefs.language=prefs.language==='en'?'en':'zh';
+    const translations={
+      zh:{settings:'设置',mouseSensitivity:'鼠标灵敏度',scrollSensitivity:'滚动灵敏度',inputMode:'输入方式',realtime:'实时输入',draft:'编辑后发送',lightMode:'亮色模式',scrollRight:'滚动条居右',rateMonitor:'速率监控器',language:'语言',selectAll:'全选',switchComputer:'切换到电脑模式',switchTV:'切换到 TV 模式',openSettings:'打开设置',closeSettings:'关闭设置',openKeyboard:'展开键盘',closeKeyboard:'收起键盘',fullscreen:'进入全屏',exitFullscreen:'退出全屏',play:'播放',pause:'暂停',mute:'静音',unmute:'取消静音',volume:'当前音量',back:'快退',forward:'快进',volumeDown:'降低音量',volumeUp:'提高音量',send:'发送文字',draftPlaceholder:'输入文字'},
+      en:{settings:'Settings',mouseSensitivity:'Mouse Sensitivity',scrollSensitivity:'Scroll Sensitivity',inputMode:'Input Method',realtime:'Live Input',draft:'Edit Then Send',lightMode:'Light Mode',scrollRight:'Scroll Bar Right',rateMonitor:'Rate Monitor',language:'Language',selectAll:'Select all',switchComputer:'Switch to computer mode',switchTV:'Switch to TV mode',openSettings:'Open settings',closeSettings:'Close settings',openKeyboard:'Open keyboard',closeKeyboard:'Close keyboard',fullscreen:'Enter fullscreen',exitFullscreen:'Exit fullscreen',play:'Play',pause:'Pause',mute:'Mute',unmute:'Unmute',volume:'Volume',back:'Rewind',forward:'Fast forward',volumeDown:'Lower volume',volumeUp:'Raise volume',send:'Send text',draftPlaceholder:'Enter text'}
+    };
+    const t=key=>translations[prefs.language][key];
+    function savePreferences(){localStorage.setItem(preferenceKey,JSON.stringify(prefs));}
+    function renderPreferences(){
+      get('sensitivity-slider').value=String(prefs.sensitivity);get('sensitivity-value').textContent=Number(prefs.sensitivity).toFixed(1);
+      get('scroll-sensitivity-slider').value=String(prefs.scrollSensitivity);get('scroll-sensitivity-value').textContent=Number(prefs.scrollSensitivity).toFixed(1);
+      get('theme-toggle').checked=!!prefs.light;document.body.classList.toggle('light-mode',!!prefs.light);
+      get('scroll-pos-toggle').checked=!!prefs.scrollRight;get('app').classList.toggle('scroll-left',!prefs.scrollRight);
+      get('rate-monitor-toggle').checked=!!prefs.rate;get('rate-monitor').hidden=!prefs.rate;get('lang-select').value=prefs.language;
+      document.documentElement.lang=prefs.language==='en'?'en':'zh-CN';
+      document.querySelectorAll('[data-ui]').forEach(el=>el.textContent=t(el.dataset.ui));
+      for(const [id,key] of [['settings-open','openSettings'],['settings-close','closeSettings'],['send','send']])get(id).setAttribute('aria-label',t(key));
+      get('keyboard').setAttribute('aria-label',t(state.typing?'closeKeyboard':'openKeyboard'));
+      get('fullscreen').setAttribute('aria-label',t(state.fullscreen?'exitFullscreen':'fullscreen'));
+      get('play').setAttribute('aria-label',t(state.playing?'pause':'play'));
+      for(const [name,key] of [['back','back'],['forward','forward'],['volume-down','volumeDown'],['volume-up','volumeUp']])document.querySelector('[data-action="'+name+'"]').setAttribute('aria-label',t(key));
+      const inputLabels=prefs.language==='en'?{enter:'Confirm (Enter)',backspace:'Backspace','select-all':'Select all',escape:'Cancel (Esc)'}:{enter:'确认（Enter）',backspace:'退格','select-all':'全选',escape:'取消（Esc）'};
+      document.querySelectorAll('.input-keys [data-action]').forEach(button=>button.setAttribute('aria-label',inputLabels[button.dataset.action]));
+      renderMode();renderVolume();
+    }
+    for(const [id,key,event] of [['sensitivity-slider','sensitivity','input'],['scroll-sensitivity-slider','scrollSensitivity','input'],['theme-toggle','light','change'],['scroll-pos-toggle','scrollRight','change'],['rate-monitor-toggle','rate','change'],['lang-select','language','change']]){
+      get(id).addEventListener(event,()=>{const el=get(id);prefs[key]=el.type==='checkbox'?el.checked:el.type==='range'?Number(el.value):el.value;savePreferences();renderPreferences();});
+    }
+    let feedbackTimer,dotTimer,scrolling=null;
+    let tapTimer=null,pendingTap=null,gesture=null;
+    const pointers=new Map();
+    const icon=(id,name)=>get(id).querySelector('use').setAttribute('href','#i-'+name);
+    function notify(text){get('feedback').textContent='演示：'+text;clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>get('feedback').textContent='',1800);}
+    function currentInput(){return get(state.inputMode==='draft'?'draft':'live-input');}
+    function keepInput(){if(state.typing&&!get('settings').hidden)return;if(state.typing)currentInput().focus({preventScroll:true});}
+    function setTyping(open){
+      state.typing=open;get('input-panel').hidden=!open;get('app').classList.toggle('typing',open);
+      get('keyboard').setAttribute('aria-expanded',String(open));get('keyboard').setAttribute('aria-label',t(open?'closeKeyboard':'openKeyboard'));
+      if(open)keepInput();else currentInput().blur();
+    }
+    function setDrag(active){
+      state.drag=active;get('app').classList.toggle('dragging',active);
+    }
+    function renderVolume(){
+      get('volume-value').textContent=state.muted?t('mute'):state.volume+'%';get('mute').setAttribute('aria-pressed',String(state.muted));get('mute').setAttribute('aria-label',state.muted?t('unmute'):t('mute')+', '+t('volume')+' '+state.volume+'%');icon('mute',state.muted?'muted':'sound');
+    }
+    get('play').addEventListener('click',()=>{
+      state.playing=!state.playing;icon('play',state.playing?'pause':'play');get('play').setAttribute('aria-label',t(state.playing?'pause':'play'));notify(state.playing?'继续播放':'已暂停');keepInput();
+    });
+    get('mute').addEventListener('click',()=>{state.muted=!state.muted;renderVolume();keepInput();});
+    get('keyboard').addEventListener('click',()=>setTyping(!state.typing));
+    get('fullscreen').addEventListener('click',()=>{
+      state.fullscreen=!state.fullscreen;get('fullscreen').setAttribute('aria-pressed',String(state.fullscreen));get('fullscreen').setAttribute('aria-label',t(state.fullscreen?'exitFullscreen':'fullscreen'));notify(state.fullscreen?'进入全屏':'退出全屏');keepInput();
+    });
+    const names={right:'右键点击',left:'左键点击',back:'快退',forward:'快进',escape:'Esc 取消',enter:'Enter 确认',delete:'删除电脑光标后的文字',backspace:'删除电脑光标前的文字','select-all':'全选电脑输入框中的文字'};
+    function action(name){
+      if(name==='volume-up'||name==='volume-down'){state.volume=Math.max(0,Math.min(100,state.volume+(name==='volume-up'?5:-5)));state.muted=false;renderVolume();}
+      else{if(name==='escape'){setDrag(false);state.fullscreen=false;get('fullscreen').setAttribute('aria-pressed','false');get('fullscreen').setAttribute('aria-label',t('fullscreen'));}notify(names[name]);}
+      keepInput();
+    }
+    document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>action(button.dataset.action)));
+    function sendText(){if(state.inputMode!=='draft')return;const text=get('draft').value;if(!text.trim()){keepInput();return;}notify('已发送 '+Array.from(text).length+' 个字符');get('draft').value='';keepInput();}
+    get('send').addEventListener('click',sendText);
+    get('draft').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();if(state.remote)action('enter');else computerKey('enter');}});
+    let composing=false,committed=null;
+    const live=get('live-input');
+    live.addEventListener('compositionstart',()=>{composing=true;committed=null;});
+    live.addEventListener('compositionend',event=>{composing=false;if(state.inputMode==='realtime'&&event.data){committed=event.data;notify('已实时输入 '+Array.from(event.data).length+' 个字符');}live.value='';});
+    live.addEventListener('input',event=>{
+      if(composing||event.isComposing||state.inputMode!=='realtime')return;
+      if(committed&&event.data===committed){committed=null;live.value='';return;}committed=null;
+      if(event.data&&activeModifiers&&event.data.length===1){computerKey(event.data.toLowerCase());live.value='';return;}
+      if(event.data)notify('已实时输入 '+Array.from(event.data).length+' 个字符');live.value='';
+    });
+    live.addEventListener('keydown',event=>{if(composing||event.isComposing)return;const keys={Backspace:'backspace',Delete:'delete',Enter:'enter'};if(keys[event.key]){event.preventDefault();if(state.remote)action(keys[event.key]);else computerKey(keys[event.key]);}});
+    function renderInputMode(){
+      get('composer').hidden=state.inputMode==='realtime';get('input-panel').classList.toggle('draft-mode',state.inputMode==='draft');
+      document.querySelectorAll('[data-input-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.inputMode===state.inputMode)));
+    }
+    get('settings-open').addEventListener('click',()=>{currentInput().blur();get('settings').hidden=false;get('settings-close').focus();});
+    function closeSettings(){get('settings').hidden=true;renderInputMode();if(state.typing)keepInput();else get('settings-open').focus();}
+    get('settings-close').addEventListener('click',closeSettings);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!get('settings').hidden){event.preventDefault();closeSettings();}});
+    get('settings').addEventListener('click',event=>{if(event.target===get('settings'))closeSettings();});
+    document.querySelectorAll('[data-input-mode]').forEach(button=>button.addEventListener('click',()=>{currentInput().blur();composing=false;committed=null;live.value='';state.inputMode=button.dataset.inputMode;localStorage.setItem('remote-mouse-prototype-input-mode',state.inputMode);renderInputMode();}));
+    function renderMode(){
+      get('app').classList.toggle('computer-mode',!state.remote);
+      get('mode-computer').setAttribute('aria-pressed',String(!state.remote));
+      get('mode-tv').setAttribute('aria-pressed',String(state.remote));
+      get('mode-computer').setAttribute('aria-label',t('switchComputer'));
+      get('mode-tv').setAttribute('aria-label',t('switchTV'));
+      get('fullscreen').hidden=!state.remote;
+      get('controls').hidden=!state.remote;get('computer-keys').hidden=state.remote;
+      get('app').setAttribute('data-screen-label',state.remote?'TV':'Computer');get('draft').placeholder=state.remote?'':t('draftPlaceholder');
+      document.querySelector('.mode-switch').setAttribute('aria-label',prefs.language==='en'?'Control mode':'操作模式');
+    }
+    document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{
+      const remote=button.dataset.mode==='tv';
+      if(state.remote!==remote){state.remote=remote;setDrag(false);clearTap();resetModifiers();renderMode();const url=new URL(location.href);url.searchParams.set('mode',remote?'tv':'computer');history.replaceState(null,'',url);}
+      keepInput();
+    }));
+    renderPreferences();renderInputMode();
+    function resizeViewport(){const height=window.visualViewport?.height??innerHeight;get('app').style.setProperty('--viewport-height',height+'px');get('app').classList.toggle('keyboard-open',height<innerHeight*.8);}
+    window.visualViewport?.addEventListener('resize',resizeViewport);window.addEventListener('resize',resizeViewport);resizeViewport();
+    function clearTap(){clearTimeout(tapTimer);tapTimer=null;pendingTap=null;}
+    function tap(point){
+      if(!state.remote){action('left');return;}
+      if(pendingTap&&performance.now()-pendingTap.time<280&&Math.hypot(point.x-pendingTap.x,point.y-pendingTap.y)<28){clearTap();action('right');return;}
+      if(pendingTap){clearTap();action('left');}
+      pendingTap={x:point.x,y:point.y,time:performance.now()};tapTimer=setTimeout(()=>{clearTap();action('left');},280);
+    }
+    // Prevent iOS text editing gestures from taking over this control surface.
+    for(const name of ['touchstart','touchmove','touchend','touchcancel','contextmenu','gesturestart','gesturechange','gestureend']){
+      get('pad').addEventListener(name,event=>event.preventDefault(),{passive:false});
+    }
+    get('pad').addEventListener('pointerdown',event=>{
+      if(event.target.closest('#scroll-rail'))return;
+      event.preventDefault();keepInput();
+      if(!pointers.size)gesture={max:0,moved:false,cancelled:false};
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY});
+      gesture.max=Math.max(gesture.max,pointers.size);get('pad').setPointerCapture(event.pointerId);
+      if(pointers.size>1)clearTap();
+      if(pointers.size===3){setDrag(true);notify('三指拖拽中');}
+    });
+    get('pad').addEventListener('pointermove',event=>{
+      const point=pointers.get(event.pointerId);if(!point||!gesture)return;
+      const dy=event.clientY-point.y;
+      if(Math.hypot(event.clientX-point.startX,event.clientY-point.startY)>5)gesture.moved=true;
+      point.x=event.clientX;point.y=event.clientY;
+      if(gesture.max===2&&pointers.size===2&&event.pointerId===pointers.keys().next().value&&gesture.moved){notify(dy>0?'向下滚动':'向上滚动');}
+      const box=get('pad').getBoundingClientRect();get('touch-dot').style.left=(event.clientX-box.left-6)+'px';get('touch-dot').style.top=(event.clientY-box.top-6)+'px';get('touch-dot').classList.add('visible');clearTimeout(dotTimer);
+    });
+    function endPointer(event){
+      const point=pointers.get(event.pointerId);if(!point||!gesture)return;
+      if(event.type!=='pointerup'){gesture.cancelled=true;clearTap();}
+      pointers.delete(event.pointerId);
+      if(state.drag&&pointers.size<3){setDrag(false);notify('已释放拖拽');}
+      if(!pointers.size){
+        if(!gesture.cancelled&&!gesture.moved){if(gesture.max===1)tap(point);else if(gesture.max===2)action('right');}
+        gesture=null;dotTimer=setTimeout(()=>get('touch-dot').classList.remove('visible'),150);
+      }
+    }
+    get('pad').addEventListener('pointerup',endPointer);get('pad').addEventListener('pointercancel',endPointer);get('pad').addEventListener('lostpointercapture',endPointer);
+    get('scroll-rail').addEventListener('pointerdown',event=>{event.preventDefault();event.stopPropagation();keepInput();scrolling={id:event.pointerId,y:event.clientY};get('scroll-rail').setPointerCapture(event.pointerId);get('scroll-rail').classList.add('active');});
+    get('scroll-rail').addEventListener('pointermove',event=>{if(scrolling&&scrolling.id===event.pointerId){notify(event.clientY>scrolling.y?'向下滚动':'向上滚动');scrolling.y=event.clientY;}});
+    function endScroll(){scrolling=null;get('scroll-rail').classList.remove('active');}
+    get('scroll-rail').addEventListener('pointerup',endScroll);get('scroll-rail').addEventListener('pointercancel',endScroll);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){setDrag(false);pointers.clear();gesture=null;clearTap();endScroll();get('touch-dot').classList.remove('visible');}});
+    // Retain the direct-tap native switch feedback verified in the original client.
+    if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&'switch' in document.createElement('input')){
+      document.querySelectorAll('.switch > input').forEach(input=>input.setAttribute('switch',''));
+      document.querySelectorAll('button').forEach(button=>{
+        const wrapper=document.createElement('span');wrapper.className='native-target';wrapper.style.setProperty('--radius',getComputedStyle(button).borderRadius);button.before(wrapper);wrapper.append(button);
+        const input=document.createElement('input');input.type='checkbox';input.setAttribute('switch','');input.className='native-switch';input.tabIndex=-1;input.setAttribute('aria-hidden','true');input.addEventListener('click',event=>{event.stopPropagation();button.click();});wrapper.append(input);
+      });
+    }
+  </script>
+</body>
+</html>

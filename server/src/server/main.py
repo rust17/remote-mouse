@@ -1,10 +1,12 @@
 import argparse
+import signal
 import sys
+
 from loguru import logger
 
 from server.config import DEFAULT_PORT, configure_logging
-from server.services.mdns import MDNSResponder
 from server.services.manager import ServiceManager
+from server.services.mdns import MDNSResponder
 from server.ui.tray_icon import TrayIcon
 
 
@@ -48,6 +50,20 @@ def main():
         initial_logging_state=args.log,
     )
 
+    def on_terminate(signum, frame=None):
+        service_manager.stop()
+        if tray.icon is not None:
+            tray.icon.stop()
+        else:
+            raise SystemExit(0)
+
+    # Cocoa's native event loop needs the Mach signal bridge used by pystray.
+    signal_registry = signal
+    if sys.platform == "darwin":
+        from PyObjCTools import MachSignals
+
+        signal_registry = MachSignals
+    previous_terminate = signal_registry.signal(signal.SIGTERM, on_terminate)
     try:
         # 5. Start Services (mDNS + Web Server)
         service_manager.start()
@@ -59,10 +75,14 @@ def main():
         logger.info("Application exited gracefully.")
         sys.exit(0)
 
+    except KeyboardInterrupt:
+        logger.info("Application interrupted; stopping services")
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
-        service_manager.stop()
         sys.exit(1)
+    finally:
+        service_manager.stop()
+        signal_registry.signal(signal.SIGTERM, previous_terminate)
 
 
 if __name__ == "__main__":

@@ -9,60 +9,113 @@
     <link rel="stylesheet" href="/src/style.css">
   </head>
   <body>
-    <div id="app">
+    <div id="pwa-top-edge" aria-hidden="true"></div>
+    <div id="app" data-mode="computer">
       <!-- Top Status Bar -->
       <div id="status-bar">
-        <div id="status-indicator">
-          <div class="status-dot"></div>
+        <div id="status-indicator" class="sr-only" role="status" aria-live="polite">
           <span class="status-text" data-i18n="status.connecting">Connecting...</span>
+        </div>
+        <div id="mode-switch" class="fab-capsule" role="group" data-i18n-aria="mode.label">
+          <button id="mode-computer" class="capsule-btn" data-mode="computer" aria-pressed="true" data-i18n-aria="mode.computer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="12" rx="2"/><path d="M2 20h20l-2-5H4l-2 5z"/></svg>
+          </button>
+          <button id="mode-tv" class="capsule-btn" data-mode="tv" aria-pressed="false" data-i18n-aria="mode.tv">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 21l2-3m8 3-2-3"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Touchpad Area -->
-      <div id="touchpad">
-        <div id="scroll-strip"></div>
-      </div>
-
-      <!-- Function Keys Panel -->
-      <div id="fn-panel">
-        <!-- Floating Toolbar (Inside panel for relative positioning but absolutely floating above) -->
+      <!-- Shared touchpad and floating toolbar -->
+      <div id="touch-zone">
+        <div id="volume-toast" class="volume-toast" data-volume-level="off" aria-hidden="true">
+          <div class="volume-toast-meter" role="meter" aria-valuemin="0" aria-valuemax="100" data-i18n-aria="media.system_volume">
+            <div class="volume-toast-fill"></div>
+            <svg class="volume-toast-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" stroke="none"/>
+              <path class="volume-toast-wave-low" d="M15 9a4.5 4.5 0 0 1 0 6"/>
+              <path class="volume-toast-wave-high" d="M18 6a8.5 8.5 0 0 1 0 12"/>
+              <path class="volume-toast-muted" d="m16 9 5 6m0-6-5 6"/>
+            </svg>
+          </div>
+          <output id="media-volume" class="sr-only" role="status" aria-live="polite" data-i18n-aria="media.system_volume">—</output>
+        </div>
+        <div id="touchpad" data-i18n-aria="mouse.touchpad">
+          <div id="scroll-strip" data-i18n-aria="mouse.scroll"></div>
+        </div>
         <div id="toolbar-fab">
           <div class="fab-capsule">
-            <button id="btn-settings" class="capsule-btn sub-action">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <button id="btn-settings" class="capsule-btn sub-action" data-i18n-aria="settings.title">
+               <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <button id="btn-fullscreen" class="capsule-btn sub-action" data-i18n-aria="media.fullscreen" aria-describedby="media-unavailable" disabled hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>
             </button>
             <div class="capsule-divider"></div>
-            <button id="btn-keyboard" class="capsule-btn main-action">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="6" y1="16" x2="6" y2="16"></line><line x1="10" y1="16" x2="10" y2="16"></line><line x1="14" y1="16" x2="14" y2="16"></line></svg>
+            <button id="btn-keyboard" class="capsule-btn main-action" data-i18n-aria="input.open" aria-expanded="false" aria-controls="input-panel">
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="10" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="14" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="6" y1="16" x2="6" y2="16"></line><line x1="10" y1="16" x2="10" y2="16"></line><line x1="14" y1="16" x2="14" y2="16"></line></svg>
             </button>
           </div>
         </div>
-        <!-- Row 1: System & Modifiers -->
-        <button class="fn-btn" data-key="esc">Esc</button>
-        <button class="fn-btn" data-key="tab">⇥</button>
-        <button class="fn-btn action-key" data-key="enter">↵</button>
-        <button class="fn-btn modifier" data-modifier="alt">Alt</button>
-        <button class="fn-btn nav-key" data-key="up">↑</button>
-        <button class="fn-btn action-key" data-key="backspace">⌫</button>
+      </div>
 
-        <!-- Row 2: Actions & Navigation -->
-        <button class="fn-btn modifier" data-modifier="ctrl">Ctrl</button>
-        <button class="fn-btn modifier" data-modifier="shift">⇧</button>
-        <button class="fn-btn modifier" data-modifier="win">
-            <svg width="14" height="14" viewBox="0 0 88 88" fill="currentColor"><path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48l-.023-33.59zm7.062-39.24l44.93-6.6.155 41.838-45.028.243zm45.105 39.52l.142 41.742-45.093-6.66-.183-39.317z"/></svg>
-        </button>
-        <button class="fn-btn nav-key" data-key="left">←</button>
-        <button class="fn-btn nav-key" data-key="down">↓</button>
-        <button class="fn-btn nav-key" data-key="right">→</button>
+      <!-- Function Keys Panel -->
+      <div id="controls-area">
+        <div id="fn-panel" data-i18n-aria="input.function_keys">
+          <!-- Row 1: System & Modifiers -->
+          <button class="fn-btn" data-key="esc">Esc</button>
+          <button class="fn-btn" data-key="tab" data-i18n-aria="input.tab">⇥</button>
+          <button class="fn-btn action-key" data-key="enter" data-i18n-aria="input.enter">↵</button>
+          <button class="fn-btn modifier" data-modifier="alt" aria-pressed="false">Alt</button>
+          <button class="fn-btn nav-key" data-key="up" data-i18n-aria="input.up">↑</button>
+          <button class="fn-btn action-key" data-key="backspace" data-i18n-aria="input.backspace">⌫</button>
+
+          <!-- Row 2: Actions & Navigation -->
+          <button class="fn-btn modifier" data-modifier="ctrl" aria-pressed="false">Ctrl</button>
+          <button class="fn-btn modifier" data-modifier="shift" aria-pressed="false" aria-label="Shift">⇧</button>
+          <button class="fn-btn modifier" data-modifier="win" aria-pressed="false" aria-label="Win / Cmd">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 88 88" fill="currentColor"><path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 75.48l-.023-33.59zm7.062-39.24l44.93-6.6.155 41.838-45.028.243zm45.105 39.52l.142 41.742-45.093-6.66-.183-39.317z"/></svg>
+          </button>
+          <button class="fn-btn nav-key" data-key="left" data-i18n-aria="input.left">←</button>
+          <button class="fn-btn nav-key" data-key="down" data-i18n-aria="input.down">↓</button>
+          <button class="fn-btn nav-key" data-key="right" data-i18n-aria="input.right">→</button>
+        </div>
+
+        <!-- Media controls require an explicit server capability and execution result. -->
+        <div id="media-panel" data-i18n-aria="media.label" hidden>
+          <div class="media-grid">
+            <button class="media-btn" data-media="rewind" data-i18n-aria="media.rewind" aria-describedby="media-unavailable" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 5-8 7 8 7V5zm10 0-8 7 8 7V5z" fill="currentColor" stroke="none"/></svg></button>
+            <button class="media-btn" data-media="play_pause" data-i18n-aria="media.play_pause" aria-describedby="media-unavailable" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 5 9 7-9 7z" fill="currentColor" stroke="none"/><path d="M17 5v14M21 5v14"/></svg></button>
+            <button class="media-btn" data-media="forward" data-i18n-aria="media.forward" aria-describedby="media-unavailable" disabled><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 5 8 7-8 7V5zm10 0 8 7-8 7V5z" fill="currentColor" stroke="none"/></svg></button>
+            <button class="media-btn" data-media="volume_down" data-i18n-aria="media.volume_down" aria-describedby="media-unavailable" disabled><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" stroke="none"/><path d="M15 9a4.5 4.5 0 0 1 0 6"/></svg></button>
+            <button class="media-btn" data-media="mute" data-i18n-aria="media.mute" aria-describedby="media-unavailable" disabled><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" stroke="none"/></svg></button>
+            <button class="media-btn" data-media="volume_up" data-i18n-aria="media.volume_up" aria-describedby="media-unavailable" disabled><svg width="24" height="24" viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9h4l5-4v14l-5-4H2z" fill="currentColor" stroke="none"/><path d="M14 9a4.5 4.5 0 0 1 0 6M17 6a8.5 8.5 0 0 1 0 12M20 3a12.5 12.5 0 0 1 0 18"/></svg></button>
+          </div>
+          <p id="media-reason" class="sr-only" role="status" hidden></p>
+          <p id="media-unavailable" class="sr-only" role="status" data-i18n="media.unavailable">媒体控制待服务端支持</p>
+        </div>
+        <div id="input-panel" hidden>
+          <div id="tv-input-keys">
+            <button class="fn-btn action-key" data-key="enter" data-i18n-aria="input.enter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4v8H4m5-5-5 5 5 5"/></svg></button>
+            <button class="fn-btn" data-key="backspace" data-i18n-aria="input.backspace">⌫</button>
+            <button class="fn-btn" data-key="select_all" data-i18n="input.select_all" data-i18n-aria="input.select_all">全选</button>
+            <button class="fn-btn" data-key="esc">Esc</button>
+          </div>
+          <div id="composer" hidden>
+            <input type="text" id="draft-input" inputmode="text" enterkeyhint="enter" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-aria="input.draft_text">
+            <button id="btn-send" data-i18n-aria="input.send"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 17V7m-4 4 4-4 4 4" stroke="var(--panel-bg)"/></svg></button>
+          </div>
+          <div id="input-feedback" role="status" aria-live="polite"></div>
+        </div>
       </div>
 
       <!-- Settings Modal -->
-      <div id="settings-modal" class="modal hidden">
+      <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div class="modal-content">
           <div class="modal-header">
-            <h3 data-i18n="settings.title">Settings</h3>
-            <button id="btn-close-settings" class="icon-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <h3 id="settings-title" data-i18n="settings.title">Settings</h3>
+            <button id="btn-close-settings" class="icon-btn" data-i18n-aria="ui.close">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>
           <div class="modal-body">
@@ -71,7 +124,7 @@
                 <span data-i18n="settings.mouse_sensitivity">Mouse Sensitivity</span>
                 <span id="sensitivity-value">2.0</span>
               </div>
-              <input type="range" id="sensitivity-slider" min="0.5" max="10.0" step="0.1" value="2.0">
+              <input type="range" id="sensitivity-slider" data-i18n-aria="settings.mouse_sensitivity" min="0.5" max="10.0" step="0.1" value="2.0">
             </div>
 
             <div class="setting-item">
@@ -79,14 +132,21 @@
                 <span data-i18n="settings.scroll_sensitivity">Scroll Sensitivity</span>
                 <span id="scroll-sensitivity-value">1.0</span>
               </div>
-              <input type="range" id="scroll-sensitivity-slider" min="0.1" max="10.0" step="0.1" value="1.0">
+              <input type="range" id="scroll-sensitivity-slider" data-i18n-aria="settings.scroll_sensitivity" min="0.1" max="10.0" step="0.1" value="1.0">
             </div>
 
+            <div class="setting-item">
+              <span class="setting-label" id="input-mode-label" data-i18n="settings.input_mode">输入方式</span>
+              <div class="input-options" role="group" aria-labelledby="input-mode-label">
+                <button class="option-btn" data-input-mode="realtime" data-i18n="input.realtime" aria-pressed="true">实时输入</button>
+                <button class="option-btn" data-input-mode="draft" data-i18n="input.draft" aria-pressed="false">编辑后发送</button>
+              </div>
+            </div>
             <div class="setting-item">
               <div class="setting-label" style="align-items: center;">
                 <span data-i18n="settings.light_mode">Light Mode</span>
                 <label class="switch">
-                    <input type="checkbox" id="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" data-i18n-aria="settings.light_mode">
                     <span class="slider"></span>
                 </label>
               </div>
@@ -96,7 +156,7 @@
               <div class="setting-label" style="align-items: center;">
                 <span data-i18n="settings.scroll_bar_right">Scroll Bar Right</span>
                 <label class="switch">
-                    <input type="checkbox" id="scroll-pos-toggle">
+                    <input type="checkbox" id="scroll-pos-toggle" data-i18n-aria="settings.scroll_bar_right">
                     <span class="slider"></span>
                 </label>
               </div>
@@ -106,7 +166,7 @@
               <div class="setting-label" style="align-items: center;">
                 <span data-i18n="settings.rate_monitor">Rate Monitor</span>
                 <label class="switch">
-                    <input type="checkbox" id="rate-monitor-toggle">
+                    <input type="checkbox" id="rate-monitor-toggle" data-i18n-aria="settings.rate_monitor">
                     <span class="slider"></span>
                 </label>
               </div>
@@ -115,7 +175,7 @@
             <div class="setting-item">
               <div class="setting-label" style="align-items: center;">
                 <span data-i18n="settings.language">Language</span>
-                <select id="lang-select">
+                <select id="lang-select" data-i18n-aria="settings.language">
                   <option value="zh">中文</option>
                   <option value="en">English</option>
                 </select>
@@ -130,12 +190,12 @@
         <div>BPS: <span id="rate-bps">0</span></div>
       </div>
 
-      <input type="text" id="keyboard-input" 
-             inputmode="text" 
-             enterkeyhint="done" 
-             autocomplete="one-time-code" 
-             autocorrect="off" 
-             autocapitalize="off" 
+      <input type="text" id="keyboard-input" data-i18n-aria="input.realtime"
+             inputmode="text"
+             enterkeyhint="done"
+             autocomplete="off"
+             autocorrect="off"
+             autocapitalize="off"
              spellcheck="false">
     </div>
     <script type="module" src="/src/main.ts"></script>

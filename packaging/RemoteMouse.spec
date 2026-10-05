@@ -1,3 +1,5 @@
+# PyInstaller injects its DSL globals when evaluating this spec.
+# ruff: noqa: F821
 import os
 import sys
 from pathlib import Path
@@ -11,6 +13,12 @@ numeric_version = version.split("-", 1)[0].split("+", 1)[0]
 backend = {"darwin": "darwin", "win32": "win32", "linux": "xorg"}[sys.platform]
 icon = str(generated / ("app.icns" if sys.platform == "darwin" else "app.ico"))
 
+media_imports = (
+    (collect_submodules("pycaw") + collect_submodules("comtypes"))
+    if sys.platform == "win32"
+    else []
+)
+
 a = Analysis(
     [str(root / "server/src/server/main.py")],
     pathex=[str(root / "server/src")],
@@ -19,7 +27,7 @@ a = Analysis(
         (str(root / "web-client/dist"), "web_dist"),
         (str(root / "server/src/server/assets"), "assets"),
     ],
-    hiddenimports=[f"pystray._{backend}"] + collect_submodules("uvicorn"),
+    hiddenimports=[f"pystray._{backend}"] + collect_submodules("uvicorn") + media_imports,
     hookspath=[],
     runtime_hooks=[str(root / "packaging/runtime_hook.py")],
     # MouseInfo is an optional coordinate-inspection GUI. On Linux it calls

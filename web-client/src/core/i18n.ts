@@ -3,6 +3,9 @@ import type { TranslationKeys } from '../lang/zh';
 import { en } from '../lang/en';
 
 type Language = 'zh' | 'en';
+type TranslationKey = {
+    [Group in keyof TranslationKeys]: `${Group}.${keyof TranslationKeys[Group] & string}`
+}[keyof TranslationKeys];
 
 class I18nManager {
     private currentLang: Language = 'zh';
@@ -25,20 +28,19 @@ class I18nManager {
         return this.currentLang;
     }
 
-    public t<K1 extends keyof TranslationKeys, K2 extends keyof TranslationKeys[K1]>(
-        key: `${K1}.${K2 & string}`
-    ): string {
-        const [k1, k2] = key.split('.') as [K1, K2 & string];
-        return this.translations[this.currentLang][k1][k2] as unknown as string;
+    public t(key: TranslationKey): string {
+        const [group, name] = key.split('.');
+        const translations = this.translations[this.currentLang] as Record<string, Record<string, string>>;
+        return translations[group]?.[name] ?? key;
     }
 
     public updateDOM() {
+        document.documentElement.lang = this.currentLang === 'zh' ? 'zh-CN' : 'en';
         const elements = document.querySelectorAll('[data-i18n]');
         elements.forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (key) {
-                // @ts-ignore - simplified access
-                const text = this.t(key as any);
+                const text = this.t(key as TranslationKey);
                 if (text) el.textContent = text;
             }
         });
@@ -48,10 +50,13 @@ class I18nManager {
         titles.forEach(el => {
             const key = el.getAttribute('data-i18n-title');
             if (key) {
-                // @ts-ignore
-                const text = this.t(key as any);
+                const text = this.t(key as TranslationKey);
                 if (text) (el as HTMLElement).title = text;
             }
+        });
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            const key = el.getAttribute('data-i18n-aria');
+            if (key) el.setAttribute('aria-label', this.t(key as TranslationKey));
         });
     }
 }

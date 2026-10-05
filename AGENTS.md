@@ -1,70 +1,60 @@
 # Remote Mouse
 
-本文件为 AI 助手及开发者提供项目概览、技术细节和工作流程参考。
-
 ## 1. 项目概览
 Remote Mouse 是一款轻量级、低延迟的远程控制工具，可将移动设备（iOS/Android）通过浏览器（PWA）变为电脑的无线触控板和键盘。支持 Windows, macOS, 和 Linux。
 
-## 2. 技术栈
-- **服务端 (Server)**:
-  - 语言: Python 3.13+
-  - 核心库: FastAPI (Web 服务), PyAutoGUI (模拟输入), Zeroconf (mDNS 自动发现), pystray (系统托盘), Pillow (图标处理), Loguru (日志)。
-  - 包管理: [uv](https://github.com/astral-sh/uv)
-- **客户端 (Web Client)**:
-  - 语言: TypeScript
-  - 框架/工具: Vite, 原生 CSS, Vite-PWA (离线支持)
-  - 测试: Vitest
+## 2. 架构概览
 
-## 3. 架构概览
-项目采用经典的 **Client-Server** 架构：
-- **服务端**: 运行多线程服务。`ServiceManager` 管理 Uvicorn (HTTP/WebSocket) 和 mDNS 响应器的生命周期。`TrayIcon` 在主线程运行，提供 UI 交互。
-- **客户端**: 响应式 Web 应用。`transport.ts` 处理与服务端的二进制通信，`touchpad.ts` 和 `keyboard.ts` 捕获用户输入并封装为协议指令。
+项目采用 **Client-Server** 架构，手机端通过浏览器或 PWA 连接电脑端服务。
 
-### 服务端进程/线程模型
-服务端采用 **单进程、多线程** 模型：
-- **主线程 (Main Thread)**: 运行 `pystray` 托盘 UI 循环。
-- **服务线程 (Service Thread)**: 由 `ServiceManager` 启动的守护线程，运行 `uvicorn` (FastAPI) 实例。负责处理 WebSocket 通信、静态文件托管以及调用 `PyAutoGUI` 模拟输入。
-- **监控线程 (Monitor Thread)**: 可选线程。当开启“速率显示”时，定时计算每秒包数 (PPS) 和比特率 (BPS)，并动态生成图标更新主线程的托盘显示。
-- **并发处理**: 网络 IO 部分基于 Python 的 `asyncio`，而 UI 与背景任务则通过多线程实现物理隔离。
+- **服务端**: Python / FastAPI 提供 Web 服务和系统控制。`ServiceManager` 管理服务与 mDNS，`TrayIcon` 提供托盘 UI；输入与音量操作分别在独立工作线程中执行。
+- **客户端**: TypeScript / Vite 提供电脑和 TV 两种模式，共用触控板、鼠标按键、滚动及键盘输入，按场景呈现媒体控制。
+- **通信**: WebSocket 发送二进制控制指令，服务端通过 JSON 返回媒体能力、执行结果和状态。
 
-## 4. 目录地图
+## 3. 目录地图
 ```text
 .
-├── server/                 # Python 服务端
-│   ├── src/server/
-│   │   ├── core/           # 核心逻辑 (协议定义、指标监控)
-│   │   ├── services/       # 后台服务 (Web, mDNS, Manager)
-│   │   ├── ui/             # 系统托盘 UI
-│   │   └── main.py         # 运行入口
-│   └── tests/              # 服务端单元测试
-├── web-client/             # TypeScript 客户端
+├── .github/workflows/      # 多平台构建、测试与发布流程
+├── server/                 # Python 服务端，依赖由 pyproject.toml 与 uv.lock 管理
+│   └── src/
+│       ├── server/
+│       │   ├── assets/     # 托盘图标资源
+│       │   ├── core/       # 二进制协议、指标监控
+│       │   ├── services/
+│       │   │   ├── web.py      # HTTP/WebSocket 与静态文件托管
+│       │   │   ├── manager.py  # 服务生命周期管理
+│       │   │   ├── mdns.py     # 局域网服务发现
+│       │   │   ├── media.py    # 媒体指令、串行输入/音量工作线程、拖拽归属
+│       │   │   ├── audio.py    # macOS、Windows、Linux 系统音量适配
+│       │   │   └── mouse.py    # 跨平台双击与 macOS 原生事件处理
+│       │   ├── ui/         # 系统托盘 UI
+│       │   ├── config.py   # 配置管理
+│       │   └── main.py     # 运行入口
+│       └── tests/          # 服务端测试
+├── web-client/             # TypeScript / Vite PWA 客户端
 │   ├── src/
-│   │   ├── core/           # 协议与传输层
-│   │   ├── input/          # 输入捕获 (Touchpad, Scroll, Keyboard)
-│   │   └── ui/             # UI 组件 (Settings, Status Bar)
-│   └── tests/              # 客户端单元测试
-└── requirement/            # 需求文档 (v1~v3)
+│   │   ├── core/           # 协议、WebSocket 传输与国际化
+│   │   ├── input/          # 触控板、滚动条与键盘输入
+│   │   ├── lang/           # 中英文文案
+│   │   ├── ui/             # 电脑/TV 模式、媒体控制、音量提示、设置、状态与震动
+│   │   ├── main.ts         # 页面初始化与交互协调
+│   │   └── style.css       # 页面样式与主题
+│   ├── public/             # PWA 图标资源
+│   ├── tests/              # 客户端测试
+│   ├── dist/               # 构建产物，由服务端托管，不纳入 Git
+│   ├── index.html          # 页面结构
+│   └── vite.config.ts      # Vite 与 PWA 配置
+├── packaging/              # PyInstaller 打包、安装器、发布与冒烟验证
+│   └── tests/              # 打包与发布测试
+├── designs/remote-mouse-ux/ # 交互原型与设计判断
+├── docs/                   # 中文说明与演示图片
+└── requirement/            # 历史需求文档与待办
 ```
 
-## 5. 核心接口 (二进制协议)
-客户端通过 WebSocket 发送二进制指令。指令格式：`[OpCode (1B)] [Payload]`
-
-| OpCode | 指令 | Payload 格式 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `0x01` | Move | `dx(2B), dy(2B)` | 相对位移 (Big-endian signed short) |
-| `0x02` | Click | `button(1B), mask(1B)` | button: 1-左, 2-右; mask: 修饰键位掩码 |
-| `0x03` | Scroll | `sx(2B), sy(2B)` | 滚动量 |
-| `0x04` | Drag | `state(1B)` | 0x01-按下, 0x00-释放 |
-| `0x05` | Text | `UTF8 String` | 文本输入 (通过剪贴板中转以支持多语言) |
-| `0x06` | Key | `mask(1B), key_name(UTF8)` | 特殊键 (Enter, Backspace 等) |
-
-**修饰键位掩码 (Modifier Mask):**
-- Bit 0: Ctrl, Bit 1: Shift, Bit 2: Alt, Bit 3: Win/Cmd
-
-## 6. 常用快速命令
+## 4. 常用快速命令
 ### 服务端 (server/)
 - **同步依赖**: `uv sync`
-- **开发运行**: `uv run python -m server.main` (可带 `--port`, `--log`)
+- **开发运行**: `uv run python -m server.main` (可带 `--port`, `--log`，开发时建议开启 `--log` 参数以启用详细日志记录)
 - **静态检查**: `uv run ruff check .`
 - **代码 lint**: `uv run ruff format`
 - **运行测试**: `uv run pytest`
@@ -75,23 +65,7 @@ Remote Mouse 是一款轻量级、低延迟的远程控制工具，可将移动�
 - **构建打包**: `npm run build` (产物由 Python 服务端自动托管)
 - **运行测试**: `npm run test`
 
-## 7. 开发规约与技巧
-
-### 如何添加新功能（扩展协议）
-若需添加新的控制指令（如多媒体控制）：
-1. **定义 OpCode**: 在 `server/src/server/core/protocol.py` 和 `web-client/src/core/protocol.ts` 中同步定义新的 `OP_XXX` 常量。
-2. **客户端实现**: 在 `web-client/src/input/` 下相关组件中捕获输入，调用 `transport.send()` 发送二进制数据。
-3. **服务端实现**: 在 `server/src/server/core/protocol.py` 的 `process_binary_command` 函数中添加对应的 `elif opcode == OP_XXX` 分支逻辑。
-
-### 静态文件托管
-- **生产/常规模式**: 服务端会自动寻找 `web-client/dist` 目录并托管。因此，修改客户端代码后需运行 `npm run build` 才能在 `uv run python -m server.main` 中看到变化。
-- **开发模式**: 建议分别启动 `npm run dev`（前端热更新）和服务端。
-
-### 日志
-- 服务端使用 `loguru`。开发时建议开启 `--log` 参数以启用详细日志记录。
-- 关键逻辑（如输入模拟失败）应使用 `logger.error` 或 `logger.warning`。
-
-## 8. Git Commit 规范
+## 5. Git Commit 规范
 遵循 **Conventional Commits** 风格：
 - `feat`: 新功能
 - `fix`: 修复 bug
@@ -102,3 +76,8 @@ Remote Mouse 是一款轻量级、低延迟的远程控制工具，可将移动�
 - `chore`: 构建过程或辅助工具的变动
 
 示例: `feat: add real-time rate monitoring`
+
+## 6. 约束
+1. README 应该从用户的角度出发，不要添加过多技术词汇
+2. 操作界面上尽量不要使用文字说明，而是通过 ui、ux 自然而然地让用户知道该怎么使用
+3. PR 说明用英文，保持精简，validation 只需提供方法与结果（不需要类型检查、格式检查等）

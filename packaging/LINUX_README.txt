@@ -11,6 +11,10 @@ Start the app
 Requirements
 Built on Ubuntu 22.04. Requires glibc 2.35+, libX11 and libXtst.
 For clipboard text input, install xclip or xsel (e.g. sudo apt install xclip).
+For system volume controls, install pactl (e.g. sudo apt install pulseaudio-utils)
+and run a PulseAudio server or PipeWire with pipewire-pulse. Missing audio
+support disables only audio controls. Playback uses the focused player
+(space / arrow keys); fullscreen double-clicks at the current mouse position.
 Wayland is not supported. You do not need Python or Node.js.
 
 Options

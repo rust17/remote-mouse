@@ -1,3 +1,5 @@
+export type ControlMode = 'computer' | 'tv';
+
 interface TouchpadCallbacks {
     onMove: (dx: number, dy: number) => void;
     onClick: (button: number) => void;
@@ -6,24 +8,20 @@ interface TouchpadCallbacks {
 }
 
 export class TouchpadHandler {
-    private element: HTMLElement;
-    private callbacks: TouchpadCallbacks;
-
-    // State
-    private pointers = new Map<number, {x: number, y: number}>();
+    private pointers = new Map<number, { x: number; y: number; startX: number; startY: number }>();
     private isDragging = false;
     private hasMoved = false;
-    private lastRightClickTime = 0;
-
-    // Movement optimization
+    private maxPointers = 0;
+    private cancelled = false;
+    private mode: ControlMode = 'computer';
     private accumulatorX = 0;
     private accumulatorY = 0;
     private scrollAccumulatorX = 0;
     private scrollAccumulatorY = 0;
-
-    // Config
     public sensitivity = 2;
     public scrollSensitivity = 1;
+    private element: HTMLElement;
+    private callbacks: TouchpadCallbacks;
 
     constructor(element: HTMLElement, callbacks: TouchpadCallbacks) {
         this.element = element;
@@ -31,177 +29,121 @@ export class TouchpadHandler {
         this.initListeners();
     }
 
-    public setSensitivity(val: number) {
-        this.sensitivity = val;
-    }
+    public setSensitivity(val: number) { this.sensitivity = val; }
+    public setScrollSensitivity(val: number) { this.scrollSensitivity = val; }
 
-    public setScrollSensitivity(val: number) {
-        this.scrollSensitivity = val;
+    public setMode(mode: ControlMode) {
+        if (mode === this.mode) return;
+        this.resetState();
+        this.mode = mode;
     }
 
     private initListeners() {
-        // Prevent all default touch actions to stop iOS gestures (text selection, magnifying glass, undo/redo menu)
-        const preventAll = (e: Event) => {
-            e.preventDefault();
-            e.stopPropagation();
-        };
-
-        this.element.addEventListener('touchstart', preventAll, { passive: false });
-        this.element.addEventListener('touchmove', preventAll, { passive: false });
-        this.element.addEventListener('touchend', preventAll, { passive: false });
-        this.element.addEventListener('touchcancel', preventAll, { passive: false });
-
-        // Disable context menu
-        this.element.addEventListener('contextmenu', preventAll, { passive: false });
-
-        // Disable iOS specific gestures (pinch to zoom etc, which might interfere)
-        // @ts-ignore - gesture events are non-standard but exist on WebKit
-        this.element.addEventListener('gesturestart', preventAll, { passive: false });
-        // @ts-ignore
-        this.element.addEventListener('gesturechange', preventAll, { passive: false });
-        // @ts-ignore
-        this.element.addEventListener('gestureend', preventAll, { passive: false });
-
-        this.element.addEventListener('pointerdown', this.handlePointerDown.bind(this));
-        this.element.addEventListener('pointermove', this.handlePointerMove.bind(this));
-        this.element.addEventListener('pointerup', this.handlePointerUp.bind(this));
-        this.element.addEventListener('pointercancel', this.handlePointerUp.bind(this));
-
-        // Reset state when page becomes hidden (e.g. lock screen, switch app)
+        const preventAll = (e: Event) => { e.preventDefault(); e.stopPropagation(); };
+        for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'contextmenu',
+            'gesturestart', 'gesturechange', 'gestureend']) {
+            this.element.addEventListener(type, preventAll, { passive: false });
+        }
+        this.element.addEventListener('pointerdown', e => this.handlePointerDown(e));
+        this.element.addEventListener('pointermove', e => this.handlePointerMove(e));
+        this.element.addEventListener('pointerup', e => this.handlePointerUp(e));
+        this.element.addEventListener('pointercancel', e => this.handlePointerUp(e));
+        this.element.addEventListener('lostpointercapture', e => this.handlePointerUp(e));
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.resetState();
-            }
+            if (document.hidden) this.resetState();
         });
+        window.addEventListener('pagehide', () => this.resetState());
     }
 
-    private resetState() {
-        this.pointers.clear();
+    public resetState() {
+        // Release before clearing the drag flag, including interrupted gestures.
+        if (this.isDragging) this.callbacks.onDrag(false);
         this.isDragging = false;
-        this.hasMoved = false;
-        this.accumulatorX = 0;
-        this.accumulatorY = 0;
-        this.scrollAccumulatorX = 0;
-        this.scrollAccumulatorY = 0;
-        if (this.isDragging) {
-             this.callbacks.onDrag(false);
+        const ids = [...this.pointers.keys()];
+        this.pointers.clear();
+        for (const id of ids) {
+            try { this.element.releasePointerCapture(id); } catch { /* Capture may already be lost. */ }
         }
+        this.hasMoved = false;
+        this.maxPointers = 0;
+        this.cancelled = false;
+        this.clearAccumulators();
+    }
+
+    private clearAccumulators() {
+        this.accumulatorX = this.accumulatorY = 0;
+        this.scrollAccumulatorX = this.scrollAccumulatorY = 0;
     }
 
     private handlePointerDown(e: PointerEvent) {
-        // Assume external logic handles "keyboard open check" or we add a "disabled" state to this class
-
+        e.preventDefault(); // Keep the software keyboard focused while using the pad.
         if (this.pointers.size === 0) {
             this.hasMoved = false;
+            this.maxPointers = 0;
+            this.cancelled = false;
         }
-
-        this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        this.accumulatorX = 0;
-        this.accumulatorY = 0;
-        this.scrollAccumulatorX = 0;
-        this.scrollAccumulatorY = 0;
-
-        try {
-            this.element.setPointerCapture(e.pointerId);
-        } catch (err) {
-            // Ignore in tests or if capture fails
-        }
-
-        if (this.pointers.size === 3) {
+        this.pointers.set(e.pointerId, {
+            x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY
+        });
+        this.maxPointers = Math.max(this.maxPointers, this.pointers.size);
+        this.clearAccumulators();
+        try { this.element.setPointerCapture(e.pointerId); } catch { /* Unsupported in tests. */ }
+        if (this.pointers.size === 3 && !this.cancelled) {
             this.isDragging = true;
             this.callbacks.onDrag(true);
         }
     }
 
     private handlePointerMove(e: PointerEvent) {
-        if (!this.pointers.has(e.pointerId)) return;
-
-        const prev = this.pointers.get(e.pointerId)!;
+        const prev = this.pointers.get(e.pointerId);
+        if (!prev || this.cancelled) return;
         const rawDx = e.clientX - prev.x;
         const rawDy = e.clientY - prev.y;
-
-        if (Math.abs(rawDx) > 1 || Math.abs(rawDy) > 1) {
+        if (Math.hypot(e.clientX - prev.startX, e.clientY - prev.startY) > 2) {
             this.hasMoved = true;
         }
-
-        this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        if (this.pointers.size === 1) {
-            // Single finger move
+        prev.x = e.clientX;
+        prev.y = e.clientY;
+        // Remaining fingers after a multi-finger gesture must not move the cursor.
+        if ((this.pointers.size === 1 && this.maxPointers === 1) || this.isDragging) {
             this.accumulatorX += rawDx * this.sensitivity;
             this.accumulatorY += rawDy * this.sensitivity;
-
-            const stepX = Math.trunc(this.accumulatorX);
-            const stepY = Math.trunc(this.accumulatorY);
-
-            if (stepX !== 0 || stepY !== 0) {
-                this.accumulatorX -= stepX;
-                this.accumulatorY -= stepY;
-                this.callbacks.onMove(stepX, stepY);
+            const dx = Math.trunc(this.accumulatorX), dy = Math.trunc(this.accumulatorY);
+            if (dx || dy) {
+                this.accumulatorX -= dx;
+                this.accumulatorY -= dy;
+                this.callbacks.onMove(dx, dy);
+                // Any transmitted movement disqualifies the gesture as a click.
+                this.hasMoved = true;
             }
-        } else if (this.pointers.size === 2) {
-            // Two finger scroll - only trigger for the first pointer to avoid double events
-            if (e.pointerId === Array.from(this.pointers.keys())[0]) {
-                this.scrollAccumulatorX += rawDx * this.scrollSensitivity;
-                this.scrollAccumulatorY += rawDy * this.scrollSensitivity;
-
-                const stepX = Math.trunc(this.scrollAccumulatorX);
-                const stepY = Math.trunc(this.scrollAccumulatorY);
-
-                if (stepX !== 0 || stepY !== 0) {
-                    this.scrollAccumulatorX -= stepX;
-                    this.scrollAccumulatorY -= stepY;
-                    this.callbacks.onScroll(stepX, stepY);
-                }
-            }
-        } else if (this.pointers.size === 3) {
-            // Three finger drag move
-            this.accumulatorX += rawDx * this.sensitivity;
-            this.accumulatorY += rawDy * this.sensitivity;
-
-            const stepX = Math.trunc(this.accumulatorX);
-            const stepY = Math.trunc(this.accumulatorY);
-
-            if (stepX !== 0 || stepY !== 0) {
-                this.accumulatorX -= stepX;
-                this.accumulatorY -= stepY;
-                this.callbacks.onMove(stepX, stepY);
+        } else if (this.pointers.size === 2 && this.maxPointers === 2
+            && e.pointerId === this.pointers.keys().next().value) {
+            this.scrollAccumulatorX += rawDx * this.scrollSensitivity;
+            this.scrollAccumulatorY += rawDy * this.scrollSensitivity;
+            const sx = Math.trunc(this.scrollAccumulatorX), sy = Math.trunc(this.scrollAccumulatorY);
+            if (sx || sy) {
+                this.scrollAccumulatorX -= sx;
+                this.scrollAccumulatorY -= sy;
+                this.callbacks.onScroll(sx, sy);
+                this.hasMoved = true;
             }
         }
     }
 
     private handlePointerUp(e: PointerEvent) {
         if (!this.pointers.has(e.pointerId)) return;
-
-        const now = Date.now();
-
-        // Fix: Do not trigger clicks on pointercancel (e.g. lock screen, system interruption)
-        if (e.type !== 'pointercancel') {
-            if (this.pointers.size === 1) {
-                // Tap (Left Click)
-                // Logic: Not moved, Not in drag mode, Time since last right click > 300ms
-                if (!this.hasMoved && !this.isDragging && (now - this.lastRightClickTime > 300)) {
-                    this.callbacks.onClick(1);
-                }
-            } else if (this.pointers.size === 2) {
-                // Two finger tap (Right Click)
-                if (!this.hasMoved) {
-                    this.callbacks.onClick(2); // OP_CLICK (0x02) used as button ID in original code
-                    this.lastRightClickTime = now;
-                }
-            }
+        if (e.type !== 'pointerup') {
+            this.cancelled = true;
         }
-
-        if (this.isDragging && this.pointers.size <= 3) {
+        this.pointers.delete(e.pointerId);
+        if (this.isDragging && this.pointers.size < 3) {
             this.isDragging = false;
             this.callbacks.onDrag(false);
         }
-
-        try {
-            this.element.releasePointerCapture(e.pointerId);
-        } catch (err) {
-            // ignore
+        try { this.element.releasePointerCapture(e.pointerId); } catch { /* Capture may already be lost. */ }
+        if (this.pointers.size === 0 && !this.cancelled && !this.hasMoved) {
+            if (this.maxPointers === 1) this.callbacks.onClick(1);
+            else if (this.maxPointers === 2) this.callbacks.onClick(2);
         }
-        this.pointers.delete(e.pointerId);
     }
 }

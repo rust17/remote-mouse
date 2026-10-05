@@ -12,62 +12,84 @@
   <img src="docs/light-setting.jpg" width="250" />
 </p>
 
----
+Remote Mouse turns your phone into a wireless mouse, keyboard and remote control for your computer. Install it on your computer, then open a page on your phone to get started.
 
-Remote Mouse is a lightweight, low-latency remote control tool that transforms your mobile device (iOS/Android) into a wireless touchpad and keyboard for your computer (Windows/macOS/Linux).
+Works with iPhone and Android phones, and Windows, macOS and Linux computers.
 
-### Features
+## What you can do
 
-- **PWA Support**: Install the web client as a native app on your phone for a full-screen experience.
-- **Auto Discovery**: Automatically finds servers in the local network using mDNS.
-- **Responsive Touchpad**: Low-latency cursor movement with adjustable sensitivity.
-- **Full Keyboard Input**: Supports text input, function keys (Esc, Tab, Enter), and modifier keys (Ctrl, Alt, Shift, Win).
-- **Modern UI**: Dark mode interface with a sleek, translucent design.
-- **Cross-Platform**: Server runs on Python, client works in any modern mobile browser.
+- **Control your computer**: Move the pointer, click, scroll and drag from your phone.
+- **Type on your phone**: Enter text directly, or edit it first and send it all at once.
+- **Watch videos comfortably**: Switch to TV mode for playback, fullscreen, volume and mute controls.
+- **Make it your own**: Adjust sensitivity, switch between light and dark themes, or add the page to your phone’s Home Screen where supported.
 
-### Download & Run
+## Install on your computer
 
-Get the latest version from the [Releases](https://github.com/rust17/remote-mouse/releases) page.
+Download the file for your computer from the [download page](https://github.com/rust17/remote-mouse/releases).
 
-#### Windows
+### Windows
 
-1. Download the file ending in `-setup.exe`, install it, and open **Remote Mouse** from the Start menu.
-2. For a portable version, download `-portable.zip`, extract the whole folder, and run `RemoteMouse.exe`. Keep all files together.
-3. Allow private-network access if the firewall asks. Use **Run as Administrator** only to control apps that also run as administrator.
+1. Download the file ending in `-setup.exe` and install it.
+2. Open **Remote Mouse** from the Start menu.
+3. If the firewall asks, allow access on private networks.
 
-#### macOS
+For a version that needs no installation, download `-portable.zip`, extract the whole folder and run `RemoteMouse.exe`. Keep the files together.
 
-1. Download the DMG for your Mac: **Apple Silicon (M-series)** uses `macos-arm64`; **Intel** uses `macos-x86_64`.
-2. Open the DMG, drag `RemoteMouse.app` into Applications, and launch it. Look for its icon in the menu bar.
-3. In **System Settings > Privacy & Security > Accessibility**, add and enable RemoteMouse so it can control your mouse and keyboard.
+### macOS
 
-The app is not Developer ID-signed or notarized. If macOS blocks it, check the download source and allow it to open in **Privacy & Security**.
+1. For an M-series Mac, choose `macos-arm64`; for an Intel Mac, choose `macos-x86_64`.
+2. Open the downloaded file, drag **RemoteMouse** into Applications and launch it. Look for its icon in the menu bar.
+3. Go to **System Settings > Privacy & Security > Accessibility** and enable RemoteMouse. This lets it control your mouse and keyboard.
 
-#### Linux
+If macOS blocks the app on first launch, confirm that you downloaded it from this project, then allow it to open in **Privacy & Security**.
 
-1. Download the file ending in `linux-x86_64.tar.gz` and extract the whole folder.
-2. Run `./RemoteMouse/RemoteMouse`. Use an **X11** desktop; Wayland is not supported. See the included `README.txt` for dependencies.
-3. The Linux tray has no right-click menu. Restart the program to restart the service; use `--port` and `--log` to set the port and enable logs.
+### Linux
 
-### Build & release
+Extract `linux-x86_64.tar.gz` and run `RemoteMouse` from the extracted folder. Use an X11 desktop; Wayland is not supported. The included `README.txt` explains any extra components your system needs. To restart the app, close it and open it again.
 
-To build on your computer, install **Node.js 22, uv and Python 3.13**, then run from the repository root:
+## Connect your phone
 
-```bash
-uv run --frozen --project server python packaging/build.py
-```
+1. Connect your phone and computer to the same Wi-Fi network.
+2. Keep Remote Mouse running on your computer.
+3. Open [http://remote-mouse.local:9997](http://remote-mouse.local:9997) in your phone’s browser.
+4. If that address does not work, use your computer’s address instead, for example `http://192.168.1.10:9997`. Find it in the Remote Mouse tray menu on Windows/macOS or your computer’s network settings.
 
-Find the packages in `packaging/out/<platform>-<architecture>/products/`. See [the packaging guide](packaging/README.md) for platform requirements and release steps.
+You can add the page to your Home Screen for easier access if your browser offers that option. Your computer still needs to be on and running Remote Mouse while you use it.
 
----
+## Use your phone as a mouse and keyboard
 
-### Usage
+Choose the **computer icon** at the top for everyday computer use, or the **TV icon** for watching videos.
 
-1. Start the server on your computer.
-2. Ensure your phone and computer are on the **same local network (Wi-Fi)**.
-3. Find the access address:
-   - Recommended: **http://remote-mouse.local:9997**
-   - Alternative: Use your computer's IP address, for example `http://192.168.1.10:9997`. Find it in network settings or the tray menu on Windows/macOS.
-4. Open the address in your mobile browser.
-5. (Optional) Add to Home Screen to install as a PWA.
-6. Start controlling!
+| Gesture | What it does |
+| --- | --- |
+| Slide one finger | Move the pointer |
+| Tap once | Left click |
+| Tap with two fingers | Right click |
+| Slide two fingers | Scroll |
+| Slide on the side strip | Scroll with one finger |
+| Slide three fingers | Drag; lift a finger to release |
+
+Tap the **keyboard icon** to type. **Live input** appears on the computer as you type. **Edit then send** lets you prepare the text on your phone and tap Send when it is ready. In this mode, Enter confirms on the computer; use Send to transfer the text.
+
+Switching modes or opening settings closes the keyboard panel. Your unsent draft stays available until you send it or reload the page.
+
+The **settings icon** lets you change sensitivity, the side strip’s position, theme and language. A green ring around the mode buttons means connected, yellow means connecting, and red means disconnected.
+
+## Watch videos in TV mode
+
+- **Play / pause**: Uses the player’s Space shortcut.
+- **Rewind / forward**: Uses the player’s left/right arrow shortcuts. How far it skips depends on the player.
+- **Fullscreen**: Double-clicks where the computer pointer is. Press again to leave fullscreen if your player supports it.
+- **Volume − / +**: Changes the computer’s volume by 5 points and turns sound back on if muted.
+- **Mute**: Turns the computer’s sound off or back on.
+
+## If something does not work
+
+- **The page will not open**: Check that the app is running, both devices are on the same network, and the computer’s firewall allows access. Try the computer’s IP address instead of the `.local` address.
+- **The pointer or keyboard does not respond**: On macOS, check the Accessibility permission. On Windows, controlling an app opened as administrator also requires opening Remote Mouse as administrator.
+- **Video controls do nothing**: Click the player on the computer again. Check that Space, arrow keys and a double click work in that player.
+- **Some buttons are greyed out**: That control is unavailable. For volume, check that the computer has an audio output; on Linux, follow the sound setup in the included `README.txt`. Updating the computer app may help if it is an older version.
+
+## For developers
+
+See the [project guide](AGENTS.md) for source setup and tests, and the [packaging guide](packaging/README.md) for building and releasing the app.

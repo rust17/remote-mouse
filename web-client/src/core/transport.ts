@@ -1,6 +1,7 @@
 import { ConnectionStatus } from './protocol';
 
 interface TransportOptions {
+    onMessage?: (data: unknown) => void;
     onStateChange?: (state: ConnectionStatus, statusText: string) => void;
 }
 
@@ -28,23 +29,41 @@ export class Transport {
 
     public connect(url: string) {
         this.isExplicitlyClosed = false;
+        if (this.reconnectTimer !== null) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        const previous = this.ws;
+        this.ws = null;
+        previous?.close();
         this.updateState(ConnectionStatus.Connecting, 'status.connecting');
 
         try {
-            this.ws = new WebSocket(url);
+            const socket = new WebSocket(url);
+            this.ws = socket;
             this.ws.binaryType = 'arraybuffer';
 
-            this.ws.onopen = () => {
+            socket.onmessage = event => {
+                if (this.ws === socket && socket.readyState === WebSocket.OPEN) {
+                    this.options.onMessage?.(event.data);
+                }
+            };
+
+            socket.onopen = () => {
+                if (this.ws !== socket) return;
                 this.updateState(ConnectionStatus.Connected, 'status.connected');
                 console.log('WebSocket opened');
             };
 
-            this.ws.onclose = () => {
+            socket.onclose = () => {
+                if (this.ws !== socket) return;
+                this.ws = null;
                 this.updateState(ConnectionStatus.Disconnected, 'status.disconnected');
                 this.scheduleReconnect(url);
             };
 
-            this.ws.onerror = (error) => {
+            socket.onerror = (error) => {
+                if (this.ws !== socket) return;
                 console.error('WebSocket error:', error);
                 this.updateState(ConnectionStatus.Disconnected, 'status.error');
                 // onerror usually is followed by onclose, so we let onclose handle reconnect
@@ -64,17 +83,25 @@ export class Transport {
             this.reconnectTimer = null;
         }
         if (this.ws) {
-            this.ws.close();
+            const socket = this.ws;
             this.ws = null;
+            socket.close();
+            this.updateState(ConnectionStatus.Disconnected, 'status.disconnected');
         }
     }
 
     public send(data: ArrayBuffer | Uint8Array) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(data);
+            try {
+                this.ws.send(data);
+            } catch {
+                return false;
+            }
             this.metrics.packetsSent++;
             this.metrics.bytesSent += data.byteLength;
+            return true;
         }
+        return false;
     }
 
     private scheduleReconnect(url: string) {
@@ -94,4 +121,3 @@ export class Transport {
         }
     }
 }
-

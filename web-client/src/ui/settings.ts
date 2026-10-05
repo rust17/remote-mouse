@@ -16,6 +16,7 @@ export class SettingsManager {
     private onSensitivityChange: (val: number) => void;
     private onScrollSensitivityChange: (val: number) => void;
     private onRateMonitorChange: (enabled: boolean) => void;
+    private lifecycle: { onOpen?: () => void; onClose?: () => void };
 
     constructor(
         modal: HTMLElement,
@@ -31,7 +32,8 @@ export class SettingsManager {
         langSelect: HTMLSelectElement,
         onSensitivityChange: (val: number) => void,
         onScrollSensitivityChange: (val: number) => void,
-        onRateMonitorChange: (enabled: boolean) => void
+        onRateMonitorChange: (enabled: boolean) => void,
+        lifecycle: { onOpen?: () => void; onClose?: () => void } = {}
     ) {
         this.modal = modal;
         this.openBtn = openBtn;
@@ -47,6 +49,7 @@ export class SettingsManager {
         this.onSensitivityChange = onSensitivityChange;
         this.onScrollSensitivityChange = onScrollSensitivityChange;
         this.onRateMonitorChange = onRateMonitorChange;
+        this.lifecycle = lifecycle;
 
         this.init();
     }
@@ -98,17 +101,49 @@ export class SettingsManager {
         }
 
         // Events
+        let restoreTriggerFocus = true;
+        const pointerInteraction = () => { restoreTriggerFocus = false; };
+        // The parent also receives taps on the iOS haptic switch wrapping the button.
+        this.openBtn.parentElement?.addEventListener('pointerdown', pointerInteraction, true);
+        this.modal.addEventListener('pointerdown', pointerInteraction, true);
+        this.openBtn.addEventListener('keydown', () => { restoreTriggerFocus = true; });
+
         this.openBtn.addEventListener('click', () => {
+            this.lifecycle.onOpen?.();
             this.modal.classList.remove('hidden');
+            this.closeBtn.focus({ preventScroll: true });
         });
 
-        this.closeBtn.addEventListener('click', () => {
+        const close = () => {
             this.modal.classList.add('hidden');
-        });
+            if (restoreTriggerFocus) {
+                this.openBtn.focus({ preventScroll: true });
+            } else {
+                const active = document.activeElement;
+                if (active instanceof HTMLElement && this.modal.contains(active)) active.blur();
+            }
+            this.lifecycle.onClose?.();
+        };
+        this.closeBtn.addEventListener('click', close);
 
         this.modal.addEventListener('click', (e) => {
             if (e.target === this.modal) {
-                this.modal.classList.add('hidden');
+                close();
+            }
+        });
+        this.modal.addEventListener('keydown', e => {
+            restoreTriggerFocus = true;
+            if (e.key === 'Escape') { e.preventDefault(); close(); }
+            if (e.key === 'Tab') {
+                const focusable = Array.from(this.modal.querySelectorAll<HTMLElement>(
+                    'button:not(:disabled), input, select'
+                )).filter(el => !el.classList.contains('native-haptic-switch') && el.tabIndex >= 0);
+                const first = focusable[0], last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault(); last?.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault(); first?.focus();
+                }
             }
         });
 

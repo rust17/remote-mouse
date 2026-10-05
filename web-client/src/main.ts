@@ -7,6 +7,8 @@ import { ScrollStripHandler } from './input/scroll-strip';
 import { KeyboardHandler } from './input/keyboard';
 import { StatusBar } from './ui/status-bar';
 import { SettingsManager } from './ui/settings';
+import { MediaControls } from './ui/media-controls';
+import { ControlModeController } from './ui/control-mode';
 import { installNativeHapticTargets } from './ui/native-haptics';
 import { WebHaptics } from 'web-haptics';
 
@@ -15,6 +17,7 @@ class RemoteMouseApp {
     private touchpad: TouchpadHandler;
     private scrollStrip: ScrollStripHandler;
     private keyboard: KeyboardHandler;
+    private media: MediaControls;
     private statusBar: StatusBar;
     private haptics = new WebHaptics();
     private moveBuffer = new ArrayBuffer(5);
@@ -22,6 +25,12 @@ class RemoteMouseApp {
     private rateMonitorTimer: number | null = null;
 
     constructor() {
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
+        document.documentElement.classList.toggle('ios-standalone', isIOS && standalone);
+
         if (window.visualViewport) {
             const updateViewport = () => {
                 const vh = window.visualViewport!.height;
@@ -52,7 +61,13 @@ class RemoteMouseApp {
         this.transport = new Transport({
             onStateChange: (state, text) => {
                 this.statusBar.update(text, state);
-            }
+                this.media?.setConnected(state === 'connected');
+                if (state !== 'connected') {
+                    this.touchpad?.resetState();
+                    this.scrollStrip?.resetState();
+                }
+            },
+            onMessage: data => this.media?.receive(data)
         });
 
         // 3. Touchpad
@@ -78,13 +93,32 @@ class RemoteMouseApp {
         this.keyboard = new KeyboardHandler(
             document.getElementById('keyboard-input')! as HTMLInputElement,
             document.getElementById('btn-keyboard')!,
-            document.getElementById('fn-panel')!,
+            document.getElementById('controls-area')!,
             {
                 onText: (text) => this.sendText(text),
                 onKeyAction: (key, modifierMask) => this.sendKeyAction(key, modifierMask)
             },
-            this.haptics
+            this.haptics,
+            {
+                panel: document.getElementById('input-panel')!,
+                composer: document.getElementById('composer')!,
+                draft: document.getElementById('draft-input')! as HTMLInputElement,
+                send: document.getElementById('btn-send')! as HTMLButtonElement,
+                feedback: document.getElementById('input-feedback')!,
+                modeButtons: document.querySelectorAll<HTMLButtonElement>('[data-input-mode]')
+            }
         );
+
+        this.media = new MediaControls(document.getElementById('app')!,
+            data => this.transport.send(data), () => this.keyboard.restoreFocus());
+
+        new ControlModeController(document.getElementById('app')!, mode => {
+            this.touchpad.setMode(mode);
+            this.media.setMode(mode);
+            this.scrollStrip.resetState();
+            this.keyboard.resetModifiers();
+            this.keyboard.close();
+        }, () => this.keyboard.restoreFocus());
 
         // 6. Settings
         const rateMonitorEl = document.getElementById('rate-monitor')!;
@@ -131,18 +165,21 @@ class RemoteMouseApp {
                 fetch(`/api/settings/tray/rate?enabled=${enabled ? 'true' : 'false'}`, {
                     method: 'POST'
                 }).catch(e => console.error('Failed to update server tray rate', e));
+            },
+            {
+                onOpen: () => {
+                    this.touchpad.resetState();
+                    this.scrollStrip.resetState();
+                    this.keyboard.close();
+                    this.keyboard.suspendFocus();
+                },
+                onClose: () => this.keyboard.resumeFocus()
             }
         );
 
         // Connect
         this.transport.connect(url);
-
-        // Handle touchpad/keyboard interaction
-        document.getElementById('touchpad')!.addEventListener('pointerdown', () => {
-            if (this.keyboard.isOpenState()) {
-                this.keyboard.toggle(false);
-            }
-        });
+        window.addEventListener('pageshow', event => { if (event.persisted) this.transport.connect(url); });
 
         installNativeHapticTargets(document.getElementById('app')!);
 
@@ -200,6 +237,7 @@ class RemoteMouseApp {
     }
 
     private sendDrag(state: number) {
+        document.getElementById('app')!.classList.toggle('dragging', state === 1);
         const buffer = new ArrayBuffer(2);
         const view = new DataView(buffer);
         view.setUint8(0, OP_DRAG);
@@ -208,13 +246,13 @@ class RemoteMouseApp {
     }
 
     private sendText(text: string) {
-        if (!text) return;
+        if (!text) return false;
         const encoder = new TextEncoder();
         const textBytes = encoder.encode(text);
         const buffer = new Uint8Array(1 + textBytes.length);
         buffer[0] = OP_TEXT;
         buffer.set(textBytes, 1);
-        this.transport.send(buffer.buffer);
+        return this.transport.send(buffer.buffer);
     }
 
     private sendKeyAction(keyName: string, modifierMask: number = 0) {

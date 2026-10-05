@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TouchpadHandler } from '../src/input/touchpad';
 
 describe('TouchpadHandler', () => {
@@ -21,6 +21,12 @@ describe('TouchpadHandler', () => {
         };
 
         handler = new TouchpadHandler(element, callbacks);
+    });
+
+    afterEach(() => {
+        handler.resetState();
+        vi.useRealTimers();
+        vi.restoreAllMocks();
     });
 
     // Helper to create events
@@ -60,7 +66,8 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onClick).not.toHaveBeenCalled();
     });
 
-    it('should trigger Right Click (2) on two finger tap', () => {
+    it.each(['computer', 'tv'] as const)('%s mode sends one right click on a two-finger tap', mode => {
+        handler.setMode(mode);
         // Finger 1 down
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         // Finger 2 down
@@ -71,7 +78,7 @@ describe('TouchpadHandler', () => {
         // Finger 1 up
         element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
 
-        expect(callbacks.onClick).toHaveBeenCalledWith(2);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(2);
     });
 
     it('should trigger Scroll on two finger move', () => {
@@ -132,5 +139,66 @@ describe('TouchpadHandler', () => {
             expect(preventSpy).toHaveBeenCalled();
             expect(stopSpy).toHaveBeenCalled();
         });
+    });
+
+    it.each(['computer', 'tv'] as const)('%s mode sends immediate left clicks for single and double taps', mode => {
+        vi.useFakeTimers();
+        handler.setMode(mode);
+        const tap = () => {
+            element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        };
+        tap();
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        vi.advanceTimersByTime(100);
+        tap();
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
+        handler.setMode(mode === 'tv' ? 'computer' : 'tv');
+        vi.advanceTimersByTime(300);
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
+    });
+
+    it('switching modes cancels an unfinished tap and releases dragging', () => {
+        handler.setMode('tv');
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        handler.setMode('computer');
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        handler.setMode('tv');
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+    });
+
+    it('three-finger release never becomes a right or left click', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        for (const id of [3, 2, 1]) element.dispatchEvent(createEvent('pointerup', id, 100, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+    });
+
+    it('cancelling one finger prevents clicks from the remaining fingers', () => {
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 2, 110, 100));
+        element.dispatchEvent(createEvent('pointercancel', 2, 110, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+    });
+
+    it('page hiding releases the remote mouse button and stops subsequent movement', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+        document.dispatchEvent(new Event('visibilitychange'));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+        expect(element.releasePointerCapture).toHaveBeenCalledTimes(3);
+    });
+
+    it('losing pointer capture releases dragging without synthesizing clicks', () => {
+        for (const id of [1, 2, 3]) element.dispatchEvent(createEvent('pointerdown', id, 100, 100));
+        element.dispatchEvent(createEvent('lostpointercapture', 3, 100, 100));
+        for (const id of [2, 1]) element.dispatchEvent(createEvent('pointerup', id, 100, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
     });
 });
