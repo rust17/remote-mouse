@@ -121,7 +121,14 @@ def test_audio_write_failure_and_unverified_result():
 
 def test_drag_owner_conflicts_disconnect_and_shutdown(monkeypatch):
     commands = []
-    service = MediaService(processor=commands.append, audio=FakeAudio(), probe=lambda: None)
+    released = threading.Event()
+
+    def process(data):
+        commands.append(data)
+        if data == b"\x04\x00":
+            released.set()
+
+    service = MediaService(processor=process, audio=FakeAudio(), probe=lambda: None)
     click = Mock()
     monkeypatch.setattr("server.services.media.double_click", click)
     with TestClient(create_app(lambda: service)) as client:
@@ -140,12 +147,15 @@ def test_drag_owner_conflicts_disconnect_and_shutdown(monkeypatch):
             owner.send_bytes(b"\x08")
             owner.receive_json()
             assert commands == [b"\x04\x01", struct.pack(">Bhh", 1, 2, 3)]
-        # Owner disconnect is joined by TestClient context exit.
+        # Session exit can precede shielded cleanup on the input worker.
+        assert released.wait(2), "Owner disconnect did not release the mouse button"
         assert commands[-1] == b"\x04\x00"
+        released.clear()
         with client.websocket_connect("/ws") as owner:
             owner.send_bytes(b"\x04\x01")
             owner.send_bytes(b"\x08")
             owner.receive_json()
+    assert released.is_set()
     assert commands[-1] == b"\x04\x00"
     click.assert_not_called()
 
