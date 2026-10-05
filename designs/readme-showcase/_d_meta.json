@@ -1,0 +1,18 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "README showcase": {
+      "versions": [
+        {
+          "path": "showcase.html",
+          "createdAt": "2026-10-05T16:01:59.570Z",
+          "status": "needs-review"
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-10-05T16:01:59.571Z",
+  "updatedAt": "2026-10-05T16:05:42.497Z"
+}

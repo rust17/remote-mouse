@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remote Mouse — README showcase</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#16191f; --accent:#3b82f6; --text:#e2e8f0; --muted:#94a3b8; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#090b0f; color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; }
+    button, select { font:inherit; }
+    nav { padding:16px 24px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center; }
+    nav button, nav select { background:var(--panel); border:1px solid #2d3340; border-radius:8px; color:var(--text); padding:8px 14px; cursor:pointer; }
+    nav button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:white; }
+    .viewport { position:relative; overflow:hidden; margin:auto; }
+    #canvas { transform-origin:top left; }
+    .art { position:relative; width:1440px; overflow:hidden; background:var(--bg); }
+    .hero { height:800px; background:radial-gradient(ellipse at 82% 58%,#172f52 0,transparent 48%),var(--bg); }
+    .brand { display:flex; gap:14px; align-items:center; font-size:25px; font-weight:650; letter-spacing:-.6px; }
+    .brand img { width:42px; height:42px; }
+    .hero .brand { position:absolute; top:62px; left:76px; }
+    .hero-copy { position:absolute; left:76px; top:214px; }
+    .eyebrow { color:#8bb8ff; letter-spacing:3px; font-size:13px; font-weight:650; }
+    h1 { font-size:76px; line-height:1.09; font-weight:650; letter-spacing:-3.8px; margin:25px 0 28px; }
+    h1 span { color:#8bb8ff; }
+    .hero-copy p { font-size:23px; line-height:1.6; color:var(--muted); margin:0; }
+    .hero-bottom { position:absolute; left:76px; bottom:65px; display:flex; gap:28px; align-items:center; font-size:15px; color:var(--muted); }
+    .hero-bottom b { color:var(--text); font-weight:550; }
+    .divider { width:1px; height:20px; background:#334155; }
+    .phone { position:absolute; width:282px; height:564px; padding:8px; border:1px solid #4b5563; border-radius:36px; background:#08090c; box-shadow:0 26px 70px #0008,inset 0 0 0 2px #1d222b; }
+    .screen { position:relative; width:100%; height:100%; overflow:hidden; border-radius:27px; }
+    .screen img { width:100%; height:100%; display:block; }
+    .phone-label { position:absolute; left:0; right:0; top:-35px; text-align:center; letter-spacing:2px; color:#94a3b8; font-size:12px; font-weight:650; }
+    .hero .computer { top:143px; left:758px; transform:rotate(-7deg); z-index:2; }
+    .hero .television { top:191px; left:1080px; transform:rotate(7deg); }
+    .gesture { position:absolute; border:1px solid #60a5fa66; border-radius:50%; background:#3b82f612; pointer-events:none; }
+    .gesture::after { content:""; position:absolute; width:14px; height:14px; background:#93c5fd; box-shadow:0 0 25px #3b82f6; border:4px solid #1e3a5f; border-radius:50%; left:calc(50% - 7px); top:calc(50% - 7px); }
+    .hero .gesture { left:105px; top:210px; width:64px; height:64px; }
+    .gallery { height:880px; padding:56px 58px; }
+    .gallery-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:52px; }
+    .gallery-heading h2 { margin:0; font-size:34px; font-weight:600; letter-spacing:-1px; }
+    .gallery-heading p { margin:0; color:var(--muted); font-size:17px; }
+    .gallery-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:40px; }
+    .gallery-item { position:relative; }
+    .gallery-item .phone { position:relative; width:282px; height:564px; margin:auto; box-shadow:0 15px 35px #0005; }
+    .gallery-item h3 { margin:26px 0 10px; font-size:21px; font-weight:600; }
+    .gallery-item p { margin:0; font-size:15px; line-height:1.6; color:var(--muted); }
+    .demo { width:1120px; height:620px; background:radial-gradient(ellipse at 72% 50%,#172b48 0,transparent 60%),var(--bg); }
+    .demo-header { position:absolute; top:32px; left:44px; right:44px; display:flex; align-items:center; justify-content:space-between; }
+    .demo .brand { font-size:18px; }
+    .demo .brand img { width:30px; height:30px; }
+    .demo-header small { font-size:11px; color:#64748b; letter-spacing:1px; }
+    .scene-copy { position:absolute; left:44px; top:122px; }
+    .scene-copy .eyebrow { font-size:11px; letter-spacing:2px; }
+    .scene-copy h2 { font-size:42px; letter-spacing:-1.5px; margin:14px 0 12px; line-height:1.12; font-weight:600; }
+    .scene-copy p { font-size:16px; margin:0; color:var(--muted); }
+    .desktop { position:absolute; left:44px; top:286px; width:634px; height:244px; border:1px solid #334155; border-radius:14px; background:#1b202a; overflow:hidden; }
+    .desktop-bar { height:30px; background:#252c38; display:flex; align-items:center; gap:6px; padding:0 12px; }
+    .desktop-bar i { width:6px; height:6px; border-radius:50%; background:#64748b; }
+    .desktop-bar span { font-size:10px; color:#94a3b8; margin-left:12px; }
+    .desktop-content { padding:24px 28px; }
+    .desktop-content .line { height:7px; width:70%; background:#303b4c; border-radius:8px; margin:16px 0; }
+    .desktop-content .line:nth-child(2) { width:88%; }
+    .desktop-content .line:nth-child(3) { width:60%; }
+    .folder { position:absolute; top:67px; right:34px; width:56px; height:45px; border-radius:7px; background:#3b82f6; border:2px solid #60a5fa; }
+    .folder::before { content:""; position:absolute; top:-8px; left:0; width:22px; height:7px; border-radius:3px 3px 0 0; background:#60a5fa; }
+    .cursor { position:absolute; font-size:28px; color:white; text-shadow:0 2px 3px #000; line-height:1; }
+    .typed { font-size:26px; font-weight:500; letter-spacing:-.5px; margin:16px 0; color:#e2e8f0; }
+    .caret { display:inline-block; height:28px; width:2px; vertical-align:middle; margin-left:3px; background:#60a5fa; }
+    .video { position:absolute; inset:30px 0 0; background:linear-gradient(120deg,#0b182c,#274777 65%,#15365a); display:flex; justify-content:center; align-items:center; }
+    .video-title { position:absolute; left:28px; top:22px; font-size:20px; letter-spacing:3px; color:#bfdbfe; font-weight:300; }
+    .video-center { color:#dbeafe; font-size:46px; opacity:.9; }
+    .video-controls { position:absolute; left:28px; right:28px; bottom:20px; display:flex; align-items:center; gap:14px; }
+    .video-progress { height:3px; border-radius:4px; background:#ffffff30; flex:1; overflow:hidden; }
+    .video-progress i { display:block; background:#93c5fd; height:100%; }
+    .video-controls span { font-size:11px; color:#bfdbfe; }
+    .speaker { display:flex; align-items:center; gap:5px; }
+    .speaker i { width:3px; border-radius:2px; background:#93c5fd; }
+    .demo .phone { left:754px; top:76px; width:248px; height:496px; border-radius:31px; padding:7px; }
+    .demo .screen { border-radius:23px; }
+    .demo .gesture { width:44px; height:44px; }
+    .tap { position:absolute; width:34px; height:34px; border:2px solid #93c5fd; border-radius:50%; background:#3b82f62a; }
+    .steps { position:absolute; left:44px; bottom:34px; display:flex; gap:26px; font-size:12px; color:#64748b; }
+    .steps span { display:flex; gap:9px; align-items:center; }
+    .steps b { font-size:10px; border:1px solid #334155; width:20px; height:20px; border-radius:50%; display:grid; place-items:center; }
+    .steps .active { color:#bfdbfe; }
+    .steps .active b { border-color:#3b82f6; background:#3b82f629; }
+    .rendering nav { display:none; }
+    .rendering .viewport { margin:0; }
+  </style>
+</head>
+<body>
+  <nav aria-label="Showcase controls">
+    <button data-kind="hero" aria-pressed="true">Hero</button>
+    <button data-kind="demo" aria-pressed="false">Walkthrough</button>
+    <button data-kind="gallery" aria-pressed="false">Screens</button>
+    <select id="language" aria-label="Language"><option value="en">English</option><option value="zh">中文</option></select>
+    <button id="play" aria-pressed="false">Play / pause</button>
+  </nav>
+  <div class="viewport"><main id="canvas" aria-label="Remote Mouse showcase"></main></div>
+  <script>
+    // Product UI images are captures of the current client. Gesture marks and
+    // the desktop are presentation overlays, not additional product features.
+    const params = new URLSearchParams(location.search);
+    let kind = params.get('kind') || 'hero';
+    let lang = params.get('lang') === 'zh' ? 'zh' : 'en';
+    let time = params.has('render') ? 0 : Number(localStorage.getItem('remote-mouse-showcase-time')) || 0;
+    let playing = false, started = 0, lastSaved = 0;
+    const copy = {
+      en: { eyebrow:'YOUR PHONE. YOUR CONTROL.', title:'Your computer.<br><span>Within reach.</span>',
+        subtitle:'A touchpad, keyboard and TV remote.<br>Already in your pocket.',
+        phone:'iPhone & Android', browser:'Open in your phone’s browser', gallery:'One phone. More possibilities.',
+        gallerySub:'Dark or light. Work or play.', cards:['Move naturally','Type your way','Settle in','Make it yours'],
+        descriptions:['Touch, scroll and drag.','Live input or edit, then send.','Playback, fullscreen and sound.','Sensitivity, theme and language.'],
+        scenes:['Move. Click. Scroll.','Type on your phone.','Enjoy from the sofa.'],
+        details:['Your everyday gestures, on a wireless touchpad.','Write a draft, then send it to your computer.','Switch to TV mode for playback and volume.'],
+        steps:['Touchpad','Keyboard','TV remote'], labels:['COMPUTER MODE','TV MODE'],
+        demo:'ILLUSTRATED WALKTHROUGH', desktop:'Computer · interaction illustration', text:'What shall we watch?' },
+      zh: { eyebrow:'手机在手，轻松掌控', title:'电脑，<br><span>尽在掌握。</span>',
+        subtitle:'手机即触控板、键盘与遥控器。<br>打开浏览器，就能开始。',
+        phone:'iPhone 与 Android', browser:'手机无需安装应用', gallery:'一部手机，更多可能。',
+        gallerySub:'深色或浅色，工作或娱乐。', cards:['轻松操作','随手输入','舒适观影','按你习惯'],
+        descriptions:['移动、点击、滚动与拖拽。','实时输入，或编辑后发送。','播放、全屏与音量控制。','灵敏度、主题与语言。'],
+        scenes:['滑动、点击、滚动。','手机打字，电脑输入。','坐在沙发上，轻松遥控。'],
+        details:['熟悉的手势，变成无线触控板。','在手机上写好，再整段发送到电脑。','切换 TV 模式，掌控播放与音量。'],
+        steps:['触控板','键盘','TV 遥控'], labels:['电脑模式','TV 模式'],
+        demo:'交互示意', desktop:'电脑 · 交互示意', text:'今晚看什么？' }
+    };
+    const canvas = document.getElementById('canvas');
+    const brand = () => '<div class="brand"><img src="icon.png" alt=""><span>Remote Mouse</span></div>';
+    const phone = (state, className = '', label = '', overlay = '') => `<div class="phone ${className}">${label ? `<div class="phone-label">${label}</div>` : ''}<div class="screen"><img src="screens/${state}-${lang}.png" alt="Remote Mouse ${state}">${overlay}</div></div>`;
+    function scaleCanvas(width, height) {
+      const scale = Math.min(1, innerWidth / width);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      canvas.style.transform = `scale(${scale})`;
+      const viewport = document.querySelector('.viewport');
+      viewport.style.width = width * scale + 'px';
+      viewport.style.height = height * scale + 'px';
+    }
+    function renderShowcase(options = {}) {
+      kind = options.kind || kind; lang = options.lang || lang; time = options.time ?? time;
+      const c = copy[lang]; document.documentElement.lang = lang;
+      if (kind === 'hero') {
+        canvas.innerHTML = `<section class="art hero" data-screen-label="Hero">${brand()}<div class="hero-copy"><div class="eyebrow">${c.eyebrow}</div><h1>${c.title}</h1><p>${c.subtitle}</p></div>${phone('computer','computer',c.labels[0],'<div class="gesture"></div>')}${phone('tv-light','television',c.labels[1])}<div class="hero-bottom"><b>Windows · macOS · Linux</b><div class="divider"></div><span>${c.phone}</span></div></section>`;
+        scaleCanvas(1440,800);
+      } else if (kind === 'gallery') {
+        const states = ['computer','draft','tv','settings'];
+        canvas.innerHTML = `<section class="art gallery" data-screen-label="Screens"><div class="gallery-heading"><h2>${c.gallery}</h2><p>${c.gallerySub}</p></div><div class="gallery-grid">${states.map((state,i) => `<div class="gallery-item">${phone(state)}<h3>${c.cards[i]}</h3><p>${c.descriptions[i]}</p></div>`).join('')}</div></section>`;
+        scaleCanvas(1440,880);
+      } else {
+        const t = time % 12;
+        const scene = Math.min(2, Math.floor(t / 4));
+        const progress = (t % 4) / 4;
+        let desktop = '', overlay = '', state = 'computer';
+        if (scene === 0) {
+          const x = 100 + Math.sin(progress * Math.PI) * 70;
+          const y = 210 - progress * 90;
+          overlay = `<div class="gesture" style="left:${x}px;top:${y}px"></div>`;
+          desktop = `<div class="desktop-content"><div class="line"></div><div class="line"></div><div class="line"></div><div class="folder"></div></div><div class="cursor" style="left:${160 + progress * 366}px;top:${158 - progress * 48}px">↖</div>`;
+        } else if (scene === 1) {
+          const sent = progress >= .55;
+          state = sent ? 'sent' : 'draft';
+          overlay = !sent && progress >= .4 ? '<div class="tap" style="right:13px;bottom:13px"></div>' : '';
+          desktop = `<div class="desktop-content"><div class="typed">${sent ? c.text : ''}<span class="caret"></span></div><div class="line"></div><div class="line"></div></div>`;
+        } else {
+          state = progress >= .55 && progress < .85 ? 'volume' : 'tv';
+          const pause = progress >= .2;
+          overlay = progress >= .13 && progress < .25 ? '<div class="tap" style="left:50%;top:87.18%;transform:translate(-50%,-50%)"></div>' : progress >= .5 && progress < .62 ? '<div class="tap" style="left:82.6%;top:94.87%;transform:translate(-50%,-50%)"></div>' : '';
+          desktop = `<div class="video"><div class="video-title">EVENING SESSION</div><div class="video-center">${pause ? '▶' : 'Ⅱ'}</div><div class="video-controls"><span>${pause ? '▶' : 'Ⅱ'}</span><div class="video-progress"><i style="width:38%"></i></div><div class="speaker">${Array.from({length:7},(_,i) => `<i style="height:${6+i*2}px;opacity:${i < (progress >= .55 ? 5 : 4) ? 1 : .2}"></i>`).join('')}</div></div></div>`;
+        }
+        canvas.innerHTML = `<section class="art demo" data-screen-label="Walkthrough"><div class="demo-header">${brand()}<small>${c.demo}</small></div><div class="scene-copy"><div class="eyebrow">${['01 / TOUCHPAD','02 / KEYBOARD','03 / TV MODE'][scene]}</div><h2>${c.scenes[scene]}</h2><p>${c.details[scene]}</p></div><div class="desktop"><div class="desktop-bar"><i></i><i></i><i></i><span>${c.desktop}</span></div>${desktop}</div>${phone(state,'','',overlay)}<div class="steps">${c.steps.map((step,i) => `<span class="${i === scene ? 'active' : ''}"><b>${i+1}</b>${step}</span>`).join('')}</div></section>`;
+        scaleCanvas(1120,620);
+      }
+      document.querySelectorAll('nav [data-kind]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.kind === kind)));
+      document.getElementById('language').value = lang;
+    }
+    window.renderShowcase = renderShowcase;
+    document.querySelectorAll('nav [data-kind]').forEach(button => button.addEventListener('click', () => renderShowcase({kind:button.dataset.kind})));
+    document.getElementById('language').addEventListener('change', event => renderShowcase({lang:event.target.value}));
+    document.getElementById('play').addEventListener('click', event => {
+      playing = !playing; started = performance.now() - time * 1000;
+      event.target.setAttribute('aria-pressed', String(playing));
+      if (playing) { renderShowcase({kind:'demo'}); requestAnimationFrame(tick); }
+    });
+    function tick(now) {
+      if (!playing) return;
+      renderShowcase({kind:'demo',time:(now-started)/1000});
+      if (now - lastSaved > 250) {
+        localStorage.setItem('remote-mouse-showcase-time', String(time % 12));
+        lastSaved = now;
+      }
+      requestAnimationFrame(tick);
+    }
+    if (params.has('render')) document.body.classList.add('rendering');
+    window.addEventListener('resize', () => renderShowcase());
+    renderShowcase();
+  </script>
+</body>
+</html>

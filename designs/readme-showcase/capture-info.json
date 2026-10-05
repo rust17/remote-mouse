@@ -1,0 +1,9 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 780
+  },
+  "deviceScaleFactor": 2,
+  "source": "web-client/index.html + web-client/src",
+  "connection": "Capture-only WebSocket fixture; no host input or audio is controlled."
+}
