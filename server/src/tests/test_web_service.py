@@ -2,7 +2,6 @@ import mimetypes
 
 import pytest
 from fastapi.testclient import TestClient
-
 from server.services import web
 
 

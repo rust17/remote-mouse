@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from loguru import logger
-
 from server.config import get_static_dir
 from server.core.metrics import metrics
 from server.core.protocol import (
