@@ -100,4 +100,20 @@ describe('settings dialog focus', () => {
         get('btn-close-settings').click();
         expect(document.activeElement).toBe(input);
     });
+
+    it('reflects and changes the mobile debug setting', () => {
+        const setEnabled = vi.fn();
+        window.remoteMouseDebug = { isEnabled: () => true, setEnabled };
+        try {
+            initialize();
+            const toggle = get<HTMLInputElement>('debug-toggle');
+            expect(toggle.checked).toBe(true);
+            toggle.click();
+            expect(setEnabled).toHaveBeenCalledExactlyOnceWith(false);
+            toggle.click();
+            expect(setEnabled).toHaveBeenLastCalledWith(true);
+        } finally {
+            delete window.remoteMouseDebug;
+        }
+    });
 });

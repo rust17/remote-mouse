@@ -56,7 +56,13 @@ def check_server(executable: Path, web: Path, cwd: Path):
             paths = re.findall(r'(?:src|href)="(/assets/[^"?#]+\.(?:js|css))"', homepage.decode())
             if not paths:
                 raise ValueError("Homepage does not reference compiled JS/CSS")
-            for path in [*paths, "/registerSW.js", "/manifest.webmanifest", "/sw.js"]:
+            for path in [
+                *paths,
+                "/registerSW.js",
+                "/debug/eruda.js",
+                "/manifest.webmanifest",
+                "/sw.js",
+            ]:
                 with opener.open(base + path, timeout=5) as response:
                     allowed_types = {
                         ".js": {"text/javascript", "application/javascript"},

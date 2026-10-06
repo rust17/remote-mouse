@@ -14,6 +14,7 @@ export const zh = {
         light_mode: '亮色模式',
         scroll_bar_right: '滚动条居右',
         rate_monitor: '速率监控器',
+        debug: '调试模式',
         language: '语言',
     },
     ui: {

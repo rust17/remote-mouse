@@ -1,5 +1,6 @@
 import { readPreference, writePreference } from '../core/preferences';
 import { i18n } from '../core/i18n';
+import { installDebugToggle } from './debug';
 
 export class SettingsManager {
     private modal: HTMLElement;
@@ -60,6 +61,7 @@ export class SettingsManager {
         const savedLang = i18n.getLanguage();
         this.langSelect.value = savedLang;
         i18n.updateDOM();
+        installDebugToggle(this.modal.querySelector<HTMLInputElement>('#debug-toggle')!);
 
         // Load saved sensitivity
         const saved = readPreference('remote-mouse-sensitivity');

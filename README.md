@@ -119,6 +119,7 @@ The **settings icon** lets you change sensitivity, the side strip’s position, 
 - **The pointer or keyboard does not respond**: On macOS, check the Accessibility permission. On Windows, controlling an app opened as administrator also requires opening Remote Mouse as administrator.
 - **Video controls do nothing**: Click the player on the computer again. Check that Space, arrow keys and a double click work in that player.
 - **Some buttons are greyed out**: That control is unavailable. For volume, check that the computer has an audio output; on Linux, follow the sound setup in the included `README.txt`. Updating the computer app may help if it is an older version.
+- **Sharing an error report**: Turn on **Debug Mode** in settings, then tap the floating console and take a screenshot of the error. If settings will not open, add `?debug=1` to the page address (or `&debug=1` if it already contains `?`).
 
 </details>
 

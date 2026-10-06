@@ -16,6 +16,7 @@ export const en: TranslationKeys = {
         light_mode: 'Light Mode',
         scroll_bar_right: 'Scroll Bar Right',
         rate_monitor: 'Rate Monitor',
+        debug: 'Debug Mode',
         language: 'Language',
     },
     ui: {
