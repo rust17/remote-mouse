@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from './preferences';
 import { zh } from '../lang/zh';
 import type { TranslationKeys } from '../lang/zh';
 import { en } from '../lang/en';
@@ -12,7 +13,7 @@ class I18nManager {
     private translations: Record<Language, TranslationKeys> = { zh, en };
 
     constructor() {
-        const savedLang = localStorage.getItem('remote-mouse-lang') as Language;
+        const savedLang = readPreference('remote-mouse-lang') as Language;
         if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
             this.currentLang = savedLang;
         }
@@ -20,7 +21,7 @@ class I18nManager {
 
     public setLanguage(lang: Language) {
         this.currentLang = lang;
-        localStorage.setItem('remote-mouse-lang', lang);
+        writePreference('remote-mouse-lang', lang);
         this.updateDOM();
     }
 

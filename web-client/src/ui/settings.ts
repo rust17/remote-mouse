@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from '../core/preferences';
 import { i18n } from '../core/i18n';
 
 export class SettingsManager {
@@ -61,7 +62,7 @@ export class SettingsManager {
         i18n.updateDOM();
 
         // Load saved sensitivity
-        const saved = localStorage.getItem('remote-mouse-sensitivity');
+        const saved = readPreference('remote-mouse-sensitivity');
         if (saved) {
             const val = parseFloat(saved);
             this.sensitivitySlider.value = saved;
@@ -70,7 +71,7 @@ export class SettingsManager {
         }
 
         // Load saved scroll sensitivity
-        const savedScroll = localStorage.getItem('remote-mouse-scroll-sensitivity');
+        const savedScroll = readPreference('remote-mouse-scroll-sensitivity');
         if (savedScroll) {
             const val = parseFloat(savedScroll);
             this.scrollSensitivitySlider.value = savedScroll;
@@ -79,7 +80,7 @@ export class SettingsManager {
         }
 
         // Load saved theme
-        const savedTheme = localStorage.getItem('remote-mouse-theme');
+        const savedTheme = readPreference('remote-mouse-theme');
         if (savedTheme === 'light') {
             document.body.classList.add('light-mode');
             document.documentElement.classList.add('light-mode');
@@ -87,14 +88,14 @@ export class SettingsManager {
         }
 
         // Load saved scroll position
-        const savedScrollPos = localStorage.getItem('remote-mouse-scroll-pos');
+        const savedScrollPos = readPreference('remote-mouse-scroll-pos');
         if (savedScrollPos === 'right') {
             document.body.classList.add('scroll-right');
             this.scrollPosToggle.checked = true;
         }
 
         // Load saved rate monitor
-        const savedRateMonitor = localStorage.getItem('remote-mouse-rate-monitor');
+        const savedRateMonitor = readPreference('remote-mouse-rate-monitor');
         if (savedRateMonitor === 'true') {
             this.rateMonitorToggle.checked = true;
             this.onRateMonitorChange(true);
@@ -154,7 +155,7 @@ export class SettingsManager {
         });
 
         this.sensitivitySlider.addEventListener('change', () => {
-            localStorage.setItem('remote-mouse-sensitivity', this.sensitivitySlider.value);
+            writePreference('remote-mouse-sensitivity', this.sensitivitySlider.value);
         });
 
         this.scrollSensitivitySlider.addEventListener('input', () => {
@@ -164,34 +165,34 @@ export class SettingsManager {
         });
 
         this.scrollSensitivitySlider.addEventListener('change', () => {
-            localStorage.setItem('remote-mouse-scroll-sensitivity', this.scrollSensitivitySlider.value);
+            writePreference('remote-mouse-scroll-sensitivity', this.scrollSensitivitySlider.value);
         });
 
         this.themeToggle.addEventListener('change', () => {
             if (this.themeToggle.checked) {
                 document.body.classList.add('light-mode');
                 document.documentElement.classList.add('light-mode');
-                localStorage.setItem('remote-mouse-theme', 'light');
+                writePreference('remote-mouse-theme', 'light');
             } else {
                 document.body.classList.remove('light-mode');
                 document.documentElement.classList.remove('light-mode');
-                localStorage.setItem('remote-mouse-theme', 'dark');
+                writePreference('remote-mouse-theme', 'dark');
             }
         });
 
         this.scrollPosToggle.addEventListener('change', () => {
             if (this.scrollPosToggle.checked) {
                 document.body.classList.add('scroll-right');
-                localStorage.setItem('remote-mouse-scroll-pos', 'right');
+                writePreference('remote-mouse-scroll-pos', 'right');
             } else {
                 document.body.classList.remove('scroll-right');
-                localStorage.setItem('remote-mouse-scroll-pos', 'left');
+                writePreference('remote-mouse-scroll-pos', 'left');
             }
         });
 
         this.rateMonitorToggle.addEventListener('change', () => {
             const enabled = this.rateMonitorToggle.checked;
-            localStorage.setItem('remote-mouse-rate-monitor', enabled.toString());
+            writePreference('remote-mouse-rate-monitor', enabled.toString());
             this.onRateMonitorChange(enabled);
         });
 

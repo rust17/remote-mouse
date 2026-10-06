@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from '../core/preferences';
 import { WebHaptics } from 'web-haptics';
 import { i18n } from '../core/i18n';
 
@@ -79,7 +80,7 @@ export class KeyboardHandler {
     public resumeFocus() { this.focusSuspended = false; this.restoreFocus(); }
 
     private initPanel(panel: InputPanel) {
-        this.inputMode = localStorage.getItem('remote-mouse-input-mode') === 'draft' ? 'draft' : 'realtime';
+        this.inputMode = readPreference('remote-mouse-input-mode') === 'draft' ? 'draft' : 'realtime';
         this.renderInputMode();
         panel.modeButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -128,7 +129,7 @@ export class KeyboardHandler {
         this.clearComposition();
         this.inputEl.value = '';
         this.inputMode = mode;
-        localStorage.setItem('remote-mouse-input-mode', mode);
+        writePreference('remote-mouse-input-mode', mode);
         this.renderInputMode();
         this.restoreFocus();
     }

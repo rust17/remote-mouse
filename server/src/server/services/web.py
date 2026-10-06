@@ -2,8 +2,8 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
 from loguru import logger
+
 from server.config import get_static_dir
 from server.core.metrics import metrics
 from server.core.protocol import (
@@ -14,6 +14,7 @@ from server.core.protocol import (
     process_binary_command,
 )
 from server.services.media import MediaService
+from server.services.static import WebStaticFiles
 from server.ui.tray_icon import TrayIcon
 
 
@@ -103,6 +104,6 @@ def create_app(service_factory=None) -> FastAPI:
 
     # 挂载静态文件（必须放在最后，否则可能覆盖 API 路由）
     if static_dir.exists():
-        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+        app.mount("/", WebStaticFiles(directory=str(static_dir), html=True), name="static")
 
     return app

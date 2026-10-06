@@ -1,10 +1,39 @@
 import subprocess
 import zipfile
+from email.message import Message
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 import smoke
+
+
+@pytest.mark.parametrize("media_type", ["text/plain", "application/octet-stream"])
+def test_server_smoke_rejects_non_javascript_content_type(tmp_path, monkeypatch, media_type):
+    web = tmp_path / "web"
+    web.mkdir()
+    homepage = b'<script type="module" src="/assets/app.js"></script>'
+    (web / "index.html").write_bytes(homepage)
+    (web / "assets").mkdir()
+    script = b"console.log('remote mouse');"
+    (web / "assets/app.js").write_bytes(script)
+
+    def open_response(url, timeout):
+        response = BytesIO(homepage if url.endswith("/") else script)
+        response.headers = Message()
+        response.headers["Content-Type"] = "text/html" if url.endswith("/") else media_type
+        return response
+
+    monkeypatch.setattr(
+        smoke.urllib.request, "build_opener", Mock(return_value=Mock(open=open_response))
+    )
+    process = Mock()
+    process.poll.return_value = None
+    monkeypatch.setattr(smoke.subprocess, "Popen", Mock(return_value=process))
+    with pytest.raises(ValueError, match="Incorrect Content-Type for /assets/app.js"):
+        smoke.check_server(tmp_path / "RemoteMouse", web, tmp_path)
+    process.terminate.assert_called_once()
 
 
 @pytest.fixture

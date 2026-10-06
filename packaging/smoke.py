@@ -56,8 +56,15 @@ def check_server(executable: Path, web: Path, cwd: Path):
             paths = re.findall(r'(?:src|href)="(/assets/[^"?#]+\.(?:js|css))"', homepage.decode())
             if not paths:
                 raise ValueError("Homepage does not reference compiled JS/CSS")
-            for path in [*paths, "/manifest.webmanifest", "/sw.js"]:
+            for path in [*paths, "/registerSW.js", "/manifest.webmanifest", "/sw.js"]:
                 with opener.open(base + path, timeout=5) as response:
+                    allowed_types = {
+                        ".js": {"text/javascript", "application/javascript"},
+                        ".css": {"text/css"},
+                        ".webmanifest": {"application/manifest+json"},
+                    }[Path(path).suffix]
+                    if response.headers.get_content_type() not in allowed_types:
+                        raise ValueError(f"Incorrect Content-Type for {path}: {response.headers}")
                     if response.read() != (web / path.lstrip("/")).read_bytes():
                         raise ValueError(f"Bundled resource mismatch: {path}")
             with connect(f"ws://127.0.0.1:{port}/ws", open_timeout=5, proxy=None) as websocket:
