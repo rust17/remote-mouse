@@ -158,6 +158,142 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
     });
 
+    it.each(['computer', 'tv'] as const)('%s mode drags on tap, then touch and slide, releasing on lift', mode => {
+        vi.useFakeTimers();
+        handler.setMode(mode);
+        handler.setSensitivity(1);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+
+        vi.advanceTimersByTime(100);
+        element.dispatchEvent(createEvent('pointerdown', 2, 101, 100));
+        // Holding alone and small tap jitter must not press the mouse button.
+        vi.advanceTimersByTime(1000);
+        element.dispatchEvent(createEvent('pointermove', 2, 104, 100));
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+
+        element.dispatchEvent(createEvent('pointermove', 2, 111, 100));
+        expect(callbacks.onDrag).toHaveBeenCalledExactlyOnceWith(true);
+        expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(10, 0);
+        expect(callbacks.onDrag.mock.invocationCallOrder[0])
+            .toBeLessThan(callbacks.onMove.mock.invocationCallOrder[0]);
+        element.dispatchEvent(createEvent('pointermove', 2, 116, 103));
+        expect(callbacks.onMove.mock.calls).toEqual([[10, 0], [5, 3]]);
+        element.dispatchEvent(createEvent('pointerup', 2, 116, 103));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onScroll).not.toHaveBeenCalled();
+    });
+
+    it('keeps a slightly shaky second tap as a double click', () => {
+        vi.useFakeTimers();
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        vi.advanceTimersByTime(100);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 103, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 103, 100));
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        { name: 'too late', firstHold: 0, gap: 301, secondX: 100 },
+        { name: 'too far away', firstHold: 0, gap: 100, secondX: 125 },
+        { name: 'after a long first press', firstHold: 301, gap: 100, secondX: 100 }
+    ])('moves normally when the next touch is $name', ({ firstHold, gap, secondX }) => {
+        vi.useFakeTimers();
+        handler.setSensitivity(1);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        vi.advanceTimersByTime(firstHold);
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        vi.advanceTimersByTime(gap);
+        element.dispatchEvent(createEvent('pointerdown', 1, secondX, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, secondX + 10, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, secondX + 10, 100));
+        expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(10, 0);
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+    });
+
+    it('preserves movement and fractional sensitivity when starting a tap drag', () => {
+        handler.setSensitivity(0.5);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 103, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 105, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 106, 100));
+        expect(callbacks.onMove.mock.calls).toEqual([[2, 0], [1, 0]]);
+        expect(callbacks.onDrag).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it.each(['tap', 'scroll'])('allows a two-finger %s after the first tap', gesture => {
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 2, 120, 100));
+        if (gesture === 'scroll') {
+            element.dispatchEvent(createEvent('pointermove', 1, 100, 110));
+            expect(callbacks.onScroll).toHaveBeenCalledExactlyOnceWith(0, 10);
+        }
+        element.dispatchEvent(createEvent('pointerup', 2, 120, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        expect(callbacks.onClick.mock.calls).toEqual(gesture === 'tap' ? [[1], [2]] : [[1]]);
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+    });
+
+    it('adding fingers releases a tap drag and cancels the remaining gesture', () => {
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+        callbacks.onMove.mockClear();
+        element.dispatchEvent(createEvent('pointerdown', 2, 120, 100));
+        element.dispatchEvent(createEvent('pointerdown', 3, 130, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 110));
+        for (const id of [3, 2, 1]) element.dispatchEvent(createEvent('pointerup', id, 110, 110));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onScroll).not.toHaveBeenCalled();
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+    });
+
+    it.each(['pointercancel', 'lostpointercapture', 'mode', 'reset', 'pagehide', 'hidden'])
+       ('%s interrupts a tap drag and releases the mouse button exactly once', interruption => {
+            element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+            callbacks.onMove.mockClear();
+            if (interruption === 'mode') handler.setMode('tv');
+            else if (interruption === 'reset') handler.resetState();
+            else if (interruption === 'pagehide') window.dispatchEvent(new Event('pagehide'));
+            else if (interruption === 'hidden') {
+                vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+                document.dispatchEvent(new Event('visibilitychange'));
+            } else element.dispatchEvent(createEvent(interruption, 1, 110, 100));
+            element.dispatchEvent(createEvent('pointermove', 1, 120, 100));
+            element.dispatchEvent(createEvent('pointerup', 1, 120, 100));
+            expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+            expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+            expect(callbacks.onMove).not.toHaveBeenCalled();
+        });
+
+    it('resetting forgets the first tap', () => {
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        handler.resetState();
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+        expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(20, 0);
+    });
+
     it('switching modes cancels an unfinished tap and releases dragging', () => {
         handler.setMode('tv');
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));

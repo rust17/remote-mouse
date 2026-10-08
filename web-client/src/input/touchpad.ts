@@ -1,5 +1,9 @@
 export type ControlMode = 'computer' | 'tv';
 
+const DOUBLE_TAP_INTERVAL = 300;
+const DOUBLE_TAP_DISTANCE = 24;
+const DRAG_THRESHOLD = 4;
+
 interface TouchpadCallbacks {
     onMove: (dx: number, dy: number) => void;
     onClick: (button: number) => void;
@@ -9,7 +13,10 @@ interface TouchpadCallbacks {
 
 export class TouchpadHandler {
     private pointers = new Map<number, { x: number; y: number; startX: number; startY: number }>();
-    private isDragging = false;
+    private dragPointerCount = 0;
+    private lastTap: { x: number; y: number; time: number } | null = null;
+    private tapStartedAt = 0;
+    private doubleTapCandidate = false;
     private hasMoved = false;
     private maxPointers = 0;
     private cancelled = false;
@@ -57,8 +64,10 @@ export class TouchpadHandler {
 
     public resetState() {
         // Release before clearing the drag flag, including interrupted gestures.
-        if (this.isDragging) this.callbacks.onDrag(false);
-        this.isDragging = false;
+        if (this.dragPointerCount) this.callbacks.onDrag(false);
+        this.dragPointerCount = 0;
+        this.lastTap = null;
+        this.doubleTapCandidate = false;
         const ids = [...this.pointers.keys()];
         this.pointers.clear();
         for (const id of ids) {
@@ -81,6 +90,19 @@ export class TouchpadHandler {
             this.hasMoved = false;
             this.maxPointers = 0;
             this.cancelled = false;
+            this.tapStartedAt = Date.now();
+            this.doubleTapCandidate = this.lastTap !== null
+                && this.tapStartedAt - this.lastTap.time <= DOUBLE_TAP_INTERVAL
+                && Math.hypot(e.clientX - this.lastTap.x, e.clientY - this.lastTap.y) <= DOUBLE_TAP_DISTANCE;
+            this.lastTap = null;
+        } else {
+            this.doubleTapCandidate = false;
+            // An extra finger interrupts a single-finger drag until all fingers lift.
+            if (this.dragPointerCount === 1) {
+                this.dragPointerCount = 0;
+                this.callbacks.onDrag(false);
+                this.cancelled = true;
+            }
         }
         this.pointers.set(e.pointerId, {
             x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY
@@ -89,7 +111,7 @@ export class TouchpadHandler {
         this.clearAccumulators();
         try { this.element.setPointerCapture(e.pointerId); } catch { /* Unsupported in tests. */ }
         if (this.pointers.size === 3 && !this.cancelled) {
-            this.isDragging = true;
+            this.dragPointerCount = 3;
             this.callbacks.onDrag(true);
         }
     }
@@ -97,15 +119,24 @@ export class TouchpadHandler {
     private handlePointerMove(e: PointerEvent) {
         const prev = this.pointers.get(e.pointerId);
         if (!prev || this.cancelled) return;
-        const rawDx = e.clientX - prev.x;
-        const rawDy = e.clientY - prev.y;
-        if (Math.hypot(e.clientX - prev.startX, e.clientY - prev.startY) > 2) {
-            this.hasMoved = true;
-        }
+        let rawDx = e.clientX - prev.x;
+        let rawDy = e.clientY - prev.y;
         prev.x = e.clientX;
         prev.y = e.clientY;
+        const distance = Math.hypot(e.clientX - prev.startX, e.clientY - prev.startY);
+        if (this.doubleTapCandidate) {
+            // Ignore tap jitter; press the button before sending the first drag movement.
+            if (distance <= DRAG_THRESHOLD) return;
+            this.doubleTapCandidate = false;
+            this.dragPointerCount = 1;
+            this.hasMoved = true;
+            this.callbacks.onDrag(true);
+            rawDx = e.clientX - prev.startX;
+            rawDy = e.clientY - prev.startY;
+        }
+        if (distance > 2) this.hasMoved = true;
         // Remaining fingers after a multi-finger gesture must not move the cursor.
-        if ((this.pointers.size === 1 && this.maxPointers === 1) || this.isDragging) {
+        if ((this.pointers.size === 1 && this.maxPointers === 1) || this.dragPointerCount) {
             this.accumulatorX += rawDx * this.sensitivity;
             this.accumulatorY += rawDy * this.sensitivity;
             const dx = Math.trunc(this.accumulatorX), dy = Math.trunc(this.accumulatorY);
@@ -136,14 +167,19 @@ export class TouchpadHandler {
             this.cancelled = true;
         }
         this.pointers.delete(e.pointerId);
-        if (this.isDragging && this.pointers.size < 3) {
-            this.isDragging = false;
+        this.doubleTapCandidate = false;
+        if (this.dragPointerCount && this.pointers.size < this.dragPointerCount) {
+            this.dragPointerCount = 0;
             this.callbacks.onDrag(false);
         }
         try { this.element.releasePointerCapture(e.pointerId); } catch { /* Capture may already be lost. */ }
         if (this.pointers.size === 0 && !this.cancelled && !this.hasMoved) {
-            if (this.maxPointers === 1) this.callbacks.onClick(1);
-            else if (this.maxPointers === 2) this.callbacks.onClick(2);
+            if (this.maxPointers === 1) {
+                if (Date.now() - this.tapStartedAt <= DOUBLE_TAP_INTERVAL) {
+                    this.lastTap = { x: e.clientX, y: e.clientY, time: Date.now() };
+                }
+                this.callbacks.onClick(1);
+            } else if (this.maxPointers === 2) this.callbacks.onClick(2);
         }
     }
 }

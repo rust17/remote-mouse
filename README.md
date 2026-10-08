@@ -91,6 +91,7 @@ Choose the **computer icon** for everyday use or the **TV icon** for watching vi
 | --- | --- |
 | Slide one finger | Move the pointer |
 | Tap once | Left click |
+| Tap, then quickly touch again and slide without lifting | Drag; lift your finger to release |
 | Tap with two fingers | Right click |
 | Slide two fingers | Scroll |
 | Slide on the side strip | Scroll with one finger |
