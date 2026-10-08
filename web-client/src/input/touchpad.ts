@@ -2,7 +2,7 @@ export type ControlMode = 'computer' | 'tv';
 
 const DOUBLE_TAP_INTERVAL = 300;
 const DOUBLE_TAP_DISTANCE = 24;
-const DRAG_THRESHOLD = 4;
+const TAP_MOVEMENT_THRESHOLD = 4;
 
 interface TouchpadCallbacks {
     onMove: (dx: number, dy: number) => void;
@@ -124,15 +124,16 @@ export class TouchpadHandler {
         prev.x = e.clientX;
         prev.y = e.clientY;
         const distance = Math.hypot(e.clientX - prev.startX, e.clientY - prev.startY);
-        if (this.doubleTapCandidate) {
-            // Ignore tap jitter; press the button before sending the first drag movement.
-            if (distance <= DRAG_THRESHOLD) return;
-            this.doubleTapCandidate = false;
-            this.dragPointerCount = 1;
-            this.hasMoved = true;
-            this.callbacks.onDrag(true);
+        if (this.pointers.size === 1 && this.maxPointers === 1 && !this.hasMoved) {
+            // Ignore jitter on either tap, retaining the whole movement when sliding starts.
+            if (distance <= TAP_MOVEMENT_THRESHOLD) return;
             rawDx = e.clientX - prev.startX;
             rawDy = e.clientY - prev.startY;
+            if (this.doubleTapCandidate) {
+                this.doubleTapCandidate = false;
+                this.dragPointerCount = 1;
+                this.callbacks.onDrag(true);
+            }
         }
         if (distance > 2) this.hasMoved = true;
         // Remaining fingers after a multi-finger gesture must not move the cursor.

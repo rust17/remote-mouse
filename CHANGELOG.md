@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.4-rc.1] - 2026-10-09
+
+### Fixed
+
+- **Web Client**: Fixed slight movement during the first tap preventing double-tap dragging. Both taps now tolerate minor finger jitter, while sliding preserves the full movement and pointer sensitivity.
+
 # [v1.1.4] - 2026-10-08
 
 ### Added

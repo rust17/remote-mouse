@@ -200,6 +200,36 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onDrag).not.toHaveBeenCalled();
     });
 
+    it.each([0.5, 1, 3])('recognizes tap dragging after %s pixels of first-tap jitter', jitter => {
+        vi.useFakeTimers();
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 100 + jitter, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100 + jitter, 100));
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(100);
+        element.dispatchEvent(createEvent('pointerdown', 2, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 2, 110, 100));
+        element.dispatchEvent(createEvent('pointerup', 2, 110, 100));
+        expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
+        expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(20, 0);
+        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+    });
+
+    it('preserves the first movement and subsequent small movements after leaving the tap threshold', () => {
+        handler.setSensitivity(0.5);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 103, 100));
+        expect(callbacks.onMove).not.toHaveBeenCalled();
+        element.dispatchEvent(createEvent('pointermove', 1, 105, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 106, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 106, 100));
+        expect(callbacks.onMove.mock.calls).toEqual([[2, 0], [1, 0]]);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+    });
+
     it.each([
         { name: 'too late', firstHold: 0, gap: 301, secondX: 100 },
         { name: 'too far away', firstHold: 0, gap: 100, secondX: 125 },
