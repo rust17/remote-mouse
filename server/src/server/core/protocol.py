@@ -14,6 +14,9 @@ pyautogui.FAILSAFE = False
 # 移除每个指令后的默认暂停
 pyautogui.PAUSE = 0
 
+# Commands run on the serial input worker; disconnect/shutdown releases this state.
+_left_button_held = False
+
 OP_MOVE = 0x01
 OP_CLICK = 0x02
 OP_SCROLL = 0x03
@@ -77,6 +80,8 @@ def get_modifiers_list(mask: int):
 
 
 def process_binary_command(data: bytes):
+    global _left_button_held
+
     if not data:
         return False
 
@@ -92,7 +97,11 @@ def process_binary_command(data: bytes):
             if len(data) < 5:
                 return False
             dx, dy = struct.unpack(">hh", data[1:5])
-            pyautogui.moveRel(dx, dy)
+            if _left_button_held:
+                # macOS requires dragged events; keep the button down between packets.
+                pyautogui.dragRel(dx, dy, button="left", mouseDownUp=False)
+            else:
+                pyautogui.moveRel(dx, dy)
 
         elif opcode == OP_CLICK:
             # [OpCode] [Button] [ModifierMask]
@@ -130,9 +139,12 @@ def process_binary_command(data: bytes):
                 return False
             state = data[1]
             if state == 0x01:
+                # Retain state if mouseDown fails after partially executing.
+                _left_button_held = True
                 pyautogui.mouseDown(button="left")
             else:
                 pyautogui.mouseUp(button="left")
+                _left_button_held = False
 
         elif opcode == OP_TEXT:
             text = data[1:].decode("utf-8")
