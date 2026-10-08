@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.4] - 2026-10-08
+
+### Added
+
+- **Web Client**: Added single-finger double-tap dragging in computer and TV modes. Tap once, then quickly touch again and slide without lifting; lift your finger to release. Existing three-finger dragging remains available.
+
+### Fixed
+
+- **Server**: Fixed macOS dragging sending ordinary mouse movement events instead of left-button drag events, which could prevent dragging application windows and other items. The mouse button stays held between movement updates and is released when the gesture ends.
+
 # [v1.1.3] - 2026-10-08
 
 ### Added

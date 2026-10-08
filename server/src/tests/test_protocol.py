@@ -3,7 +3,6 @@ import sys
 from unittest.mock import Mock, call, patch
 
 import pytest
-
 from server.core import protocol
 
 
