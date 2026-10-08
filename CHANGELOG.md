@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.3] - 2026-10-08
+
+### Added
+
+- **Web Client**: Added an optional Eruda debug console for viewing errors on a phone. Enable Debug Mode in Settings, or append `?debug=1` to the page URL if the interface cannot start.
+- **Web Client**: Capture startup errors and provide a fallback error viewer when the debug console cannot initialize.
+
+### Changed
+
+- **Docs**: Refreshed English and Chinese guides with new product visuals and mobile troubleshooting instructions.
+
+### Fixed
+
+- **Web Client**: Fixed startup failures when browser storage is unavailable. The interface now works with default preferences when settings cannot be saved.
+- **Server**: Fixed incorrect JavaScript and stylesheet response types caused by system MIME settings, which could prevent the controller from loading on Windows.
+
 # [v1.1.2] - 2026-10-05
 
 ### Added
