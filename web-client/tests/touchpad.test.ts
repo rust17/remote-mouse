@@ -40,9 +40,14 @@ describe('TouchpadHandler', () => {
     };
 
     it('should trigger Left Click (1) on single tap', () => {
+        vi.useFakeTimers();
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
 
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(299);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(1);
         expect(callbacks.onClick).toHaveBeenCalledWith(1);
         expect(callbacks.onMove).not.toHaveBeenCalled();
     });
@@ -141,7 +146,7 @@ describe('TouchpadHandler', () => {
         });
     });
 
-    it.each(['computer', 'tv'] as const)('%s mode sends immediate left clicks for single and double taps', mode => {
+    it.each(['computer', 'tv'] as const)('%s mode sends two left clicks when both taps finish without dragging', mode => {
         vi.useFakeTimers();
         handler.setMode(mode);
         const tap = () => {
@@ -149,7 +154,7 @@ describe('TouchpadHandler', () => {
             element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
         };
         tap();
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
         vi.advanceTimersByTime(100);
         tap();
         expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
@@ -164,7 +169,7 @@ describe('TouchpadHandler', () => {
         handler.setSensitivity(1);
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
 
         vi.advanceTimersByTime(100);
         element.dispatchEvent(createEvent('pointerdown', 2, 101, 100));
@@ -183,7 +188,8 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onMove.mock.calls).toEqual([[10, 0], [5, 3]]);
         element.dispatchEvent(createEvent('pointerup', 2, 116, 103));
         expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        vi.advanceTimersByTime(1000);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
         expect(callbacks.onScroll).not.toHaveBeenCalled();
     });
 
@@ -200,12 +206,54 @@ describe('TouchpadHandler', () => {
         expect(callbacks.onDrag).not.toHaveBeenCalled();
     });
 
+    it('does not reuse a completed double click as the first tap of another drag', () => {
+        vi.useFakeTimers();
+        for (let tap = 0; tap < 2; tap++) {
+            element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+            element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+            vi.advanceTimersByTime(100);
+        }
+        expect(callbacks.onClick.mock.calls).toEqual([[1], [1]]);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointermove', 1, 110, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 110, 100));
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+        expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(20, 0);
+    });
+
+    it.each(['mode', 'reset', 'pagehide', 'hidden'])('%s cancels a pending first tap', interruption => {
+        vi.useFakeTimers();
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        if (interruption === 'mode') handler.setMode('tv');
+        else if (interruption === 'reset') handler.resetState();
+        else if (interruption === 'pagehide') window.dispatchEvent(new Event('pagehide'));
+        else {
+            vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+            document.dispatchEvent(new Event('visibilitychange'));
+        }
+        vi.advanceTimersByTime(1000);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+    });
+
+    it.each(['pointercancel', 'lostpointercapture'])('%s during the second touch discards the pending click', type => {
+        vi.useFakeTimers();
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent('pointerup', 1, 100, 100));
+        vi.advanceTimersByTime(100);
+        element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
+        element.dispatchEvent(createEvent(type, 1, 100, 100));
+        vi.advanceTimersByTime(1000);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
+        expect(callbacks.onDrag).not.toHaveBeenCalled();
+    });
+
     it.each([0.5, 1, 3])('recognizes tap dragging after %s pixels of first-tap jitter', jitter => {
         vi.useFakeTimers();
         element.dispatchEvent(createEvent('pointerdown', 1, 100, 100));
         element.dispatchEvent(createEvent('pointermove', 1, 100 + jitter, 100));
         element.dispatchEvent(createEvent('pointerup', 1, 100 + jitter, 100));
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
         expect(callbacks.onMove).not.toHaveBeenCalled();
 
         vi.advanceTimersByTime(100);
@@ -214,7 +262,7 @@ describe('TouchpadHandler', () => {
         element.dispatchEvent(createEvent('pointerup', 2, 110, 100));
         expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
         expect(callbacks.onMove).toHaveBeenCalledExactlyOnceWith(20, 0);
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
     });
 
     it('preserves the first movement and subsequent small movements after leaving the tap threshold', () => {
@@ -288,7 +336,7 @@ describe('TouchpadHandler', () => {
         element.dispatchEvent(createEvent('pointermove', 1, 110, 110));
         for (const id of [3, 2, 1]) element.dispatchEvent(createEvent('pointerup', id, 110, 110));
         expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
-        expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+        expect(callbacks.onClick).not.toHaveBeenCalled();
         expect(callbacks.onScroll).not.toHaveBeenCalled();
         expect(callbacks.onMove).not.toHaveBeenCalled();
     });
@@ -310,7 +358,7 @@ describe('TouchpadHandler', () => {
             element.dispatchEvent(createEvent('pointermove', 1, 120, 100));
             element.dispatchEvent(createEvent('pointerup', 1, 120, 100));
             expect(callbacks.onDrag.mock.calls).toEqual([[true], [false]]);
-            expect(callbacks.onClick).toHaveBeenCalledExactlyOnceWith(1);
+            expect(callbacks.onClick).not.toHaveBeenCalled();
             expect(callbacks.onMove).not.toHaveBeenCalled();
         });
 

@@ -14,7 +14,8 @@ interface TouchpadCallbacks {
 export class TouchpadHandler {
     private pointers = new Map<number, { x: number; y: number; startX: number; startY: number }>();
     private dragPointerCount = 0;
-    private lastTap: { x: number; y: number; time: number } | null = null;
+    private pendingTap: { x: number; y: number; time: number } | null = null;
+    private pendingTapTimer: number | null = null;
     private tapStartedAt = 0;
     private doubleTapCandidate = false;
     private hasMoved = false;
@@ -66,7 +67,7 @@ export class TouchpadHandler {
         // Release before clearing the drag flag, including interrupted gestures.
         if (this.dragPointerCount) this.callbacks.onDrag(false);
         this.dragPointerCount = 0;
-        this.lastTap = null;
+        this.clearPendingTap();
         this.doubleTapCandidate = false;
         const ids = [...this.pointers.keys()];
         this.pointers.clear();
@@ -84,6 +85,22 @@ export class TouchpadHandler {
         this.scrollAccumulatorX = this.scrollAccumulatorY = 0;
     }
 
+    private pausePendingTap() {
+        if (this.pendingTapTimer !== null) window.clearTimeout(this.pendingTapTimer);
+        this.pendingTapTimer = null;
+    }
+
+    private clearPendingTap() {
+        this.pausePendingTap();
+        this.pendingTap = null;
+    }
+
+    private flushPendingTap() {
+        if (!this.pendingTap) return;
+        this.clearPendingTap();
+        this.callbacks.onClick(1);
+    }
+
     private handlePointerDown(e: PointerEvent) {
         e.preventDefault(); // Keep the software keyboard focused while using the pad.
         if (this.pointers.size === 0) {
@@ -91,11 +108,13 @@ export class TouchpadHandler {
             this.maxPointers = 0;
             this.cancelled = false;
             this.tapStartedAt = Date.now();
-            this.doubleTapCandidate = this.lastTap !== null
-                && this.tapStartedAt - this.lastTap.time <= DOUBLE_TAP_INTERVAL
-                && Math.hypot(e.clientX - this.lastTap.x, e.clientY - this.lastTap.y) <= DOUBLE_TAP_DISTANCE;
-            this.lastTap = null;
+            this.doubleTapCandidate = this.pendingTap !== null
+                && this.tapStartedAt - this.pendingTap.time <= DOUBLE_TAP_INTERVAL
+                && Math.hypot(e.clientX - this.pendingTap.x, e.clientY - this.pendingTap.y) <= DOUBLE_TAP_DISTANCE;
+            if (this.doubleTapCandidate) this.pausePendingTap();
+            else this.flushPendingTap();
         } else {
+            this.flushPendingTap();
             this.doubleTapCandidate = false;
             // An extra finger interrupts a single-finger drag until all fingers lift.
             if (this.dragPointerCount === 1) {
@@ -131,6 +150,8 @@ export class TouchpadHandler {
             rawDy = e.clientY - prev.startY;
             if (this.doubleTapCandidate) {
                 this.doubleTapCandidate = false;
+                // A preceding click would make Windows interpret this press as a double-click.
+                this.clearPendingTap();
                 this.dragPointerCount = 1;
                 this.callbacks.onDrag(true);
             }
@@ -166,8 +187,10 @@ export class TouchpadHandler {
         if (!this.pointers.has(e.pointerId)) return;
         if (e.type !== 'pointerup') {
             this.cancelled = true;
+            this.clearPendingTap();
         }
         this.pointers.delete(e.pointerId);
+        const wasDoubleTap = this.doubleTapCandidate;
         this.doubleTapCandidate = false;
         if (this.dragPointerCount && this.pointers.size < this.dragPointerCount) {
             this.dragPointerCount = 0;
@@ -176,10 +199,13 @@ export class TouchpadHandler {
         try { this.element.releasePointerCapture(e.pointerId); } catch { /* Capture may already be lost. */ }
         if (this.pointers.size === 0 && !this.cancelled && !this.hasMoved) {
             if (this.maxPointers === 1) {
-                if (Date.now() - this.tapStartedAt <= DOUBLE_TAP_INTERVAL) {
-                    this.lastTap = { x: e.clientX, y: e.clientY, time: Date.now() };
-                }
-                this.callbacks.onClick(1);
+                if (wasDoubleTap) {
+                    this.flushPendingTap();
+                    this.callbacks.onClick(1);
+                } else if (Date.now() - this.tapStartedAt <= DOUBLE_TAP_INTERVAL) {
+                    this.pendingTap = { x: e.clientX, y: e.clientY, time: Date.now() };
+                    this.pendingTapTimer = window.setTimeout(() => this.flushPendingTap(), DOUBLE_TAP_INTERVAL);
+                } else this.callbacks.onClick(1);
             } else if (this.maxPointers === 2) this.callbacks.onClick(2);
         }
     }

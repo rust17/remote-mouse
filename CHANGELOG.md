@@ -2,21 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-# [v1.1.4-rc.1] - 2026-10-09
-
-### Fixed
-
-- **Web Client**: Fixed slight movement during the first tap preventing double-tap dragging. Both taps now tolerate minor finger jitter, while sliding preserves the full movement and pointer sensitivity.
-
-# [v1.1.4] - 2026-10-08
+# [v1.1.4] - 2026-10-09
 
 ### Added
 
 - **Web Client**: Added single-finger double-tap dragging in computer and TV modes. Tap once, then quickly touch again and slide without lifting; lift your finger to release. Existing three-finger dragging remains available.
 
+### Changed
+
+- **Web Client**: Touchpad single taps wait briefly (up to 300 ms) to distinguish a click from a drag. Dedicated mouse buttons still respond immediately.
+
 ### Fixed
 
+- **Web Client**: Fixed slight movement during the first tap preventing double-tap dragging. Both taps now tolerate minor finger jitter while preserving pointer movement and sensitivity.
+- **Web Client**: Fixed tap dragging being interpreted as a native double-click on Windows. The first tap is held pending; sliding on the second touch starts a drag without sending a preceding click. Releasing both taps still produces an ordinary double-click.
 - **Server**: Fixed macOS dragging sending ordinary mouse movement events instead of left-button drag events, which could prevent dragging application windows and other items. The mouse button stays held between movement updates and is released when the gesture ends.
+
+# [v1.1.4-rc.1] - 2026-10-09
+
+### Fixed
+
+- **Web Client**: Fixed slight movement during the first tap preventing double-tap dragging. Both taps now tolerate minor finger jitter, while sliding preserves the full movement and pointer sensitivity.
 
 # [v1.1.3] - 2026-10-08
 

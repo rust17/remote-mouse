@@ -55,6 +55,34 @@ describe('startup with unavailable preference storage', () => {
         expect(get('status-indicator').classList.contains('status-connected')).toBe(true);
     };
 
+    it.each(['computer', 'tv'])('%s mode sends only press, move and release for a second-touch drag', async mode => {
+        await boot();
+        get(`mode-${mode}`).click();
+        socket.send.mockClear();
+        const inputPackets = () => socket.send.mock.calls
+            .map(([buffer]) => new Uint8Array(buffer)).filter(packet => packet[0]! <= 4);
+        const pad = get('touchpad');
+        const pointer = (type: string, x: number) => pad.dispatchEvent(new PointerEvent(type, {
+            pointerId: 1, clientX: x, clientY: 100, bubbles: true
+        }));
+        pointer('pointerdown', 100);
+        pointer('pointerup', 100);
+        vi.advanceTimersByTime(100);
+        expect(inputPackets()).toEqual([]);
+        pointer('pointerdown', 100);
+        vi.advanceTimersByTime(1000);
+        expect(inputPackets()).toEqual([]);
+        pointer('pointermove', 110);
+        pointer('pointerup', 110);
+        vi.advanceTimersByTime(1000);
+        const packets = inputPackets();
+        // A click packet before the press would turn it into a Windows double-click.
+        expect(packets.map(packet => packet[0])).toEqual([4, 1, 4]);
+        expect([...packets[0]!]).toEqual([4, 1]);
+        expect([...packets[2]!]).toEqual([4, 0]);
+        expect(get('app').classList.contains('dragging')).toBe(false);
+    });
+
     it.each(['access', 'read', 'write'] as const)('keeps controls working when storage %s throws', async failure => {
         if (failure === 'access') {
             vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
