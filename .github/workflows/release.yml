@@ -19,6 +19,10 @@ on:
         description: 'Mark as prerelease'
         default: true
         type: boolean
+      replace_existing:
+        description: 'Replace an existing release after backing up its assets'
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -33,6 +37,7 @@ jobs:
     outputs:
       version: ${{ steps.identity.outputs.version }}
       commit: ${{ steps.identity.outputs.commit }}
+      release_exists: ${{ steps.release_check.outputs.exists }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,15 +50,22 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag_name }}
         run: python packaging/release.py prepare --tag "$RELEASE_TAG"
-      - name: Refuse to overwrite an existing release
+      - name: Check whether replacing an existing release is allowed
+        id: release_check
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag_name }}
+          REPLACE_EXISTING: ${{ inputs.replace_existing }}
         run: |
           gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name' > existing-tags.txt
           if grep -Fxq -- "$RELEASE_TAG" existing-tags.txt; then
-            echo "A release already exists for $RELEASE_TAG" >&2
-            exit 1
+            if [[ "$REPLACE_EXISTING" != true ]]; then
+              echo "A release already exists for $RELEASE_TAG; replacement was not requested" >&2
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
   macos:
     needs: prepare
@@ -96,7 +108,26 @@ jobs:
           SOURCE_SHA: ${{ needs.prepare.outputs.commit }}
           RELEASE_TAG: ${{ inputs.tag_name }}
         run: python packaging/release.py verify --directory release-assets --version "$BUILD_VERSION" --commit "$SOURCE_SHA" --tag "$RELEASE_TAG"
-      - name: Create release and upload verified assets
+      - name: Back up the existing release
+        if: needs.prepare.outputs.release_exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: |
+          mkdir -p previous-release/assets
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > previous-release/release.json
+          gh release download "$RELEASE_TAG" --dir previous-release/assets
+          cd previous-release/assets
+          sha256sum --check SHA256SUMS.txt
+      - name: Save the previous release for recovery
+        if: needs.prepare.outputs.release_exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: previous-release-${{ inputs.tag_name }}-${{ github.run_id }}
+          path: previous-release/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publish verified assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag_name }}
@@ -104,9 +135,15 @@ jobs:
           RELEASE_BODY: ${{ inputs.release_body }}
           PRERELEASE: ${{ inputs.prerelease }}
           SOURCE_SHA: ${{ needs.prepare.outputs.commit }}
+          RELEASE_EXISTS: ${{ needs.prepare.outputs.release_exists }}
         run: |
           printf '%s\n' "$RELEASE_BODY" > release-notes.txt
           flags=()
           if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); fi
-          gh release create "$RELEASE_TAG" release-assets/* --draft --verify-tag --target "$SOURCE_SHA" --title "$RELEASE_TITLE" --notes-file release-notes.txt "${flags[@]}"
+          if [[ "$RELEASE_EXISTS" == true ]]; then
+            gh release edit "$RELEASE_TAG" --draft --verify-tag --target "$SOURCE_SHA" --title "$RELEASE_TITLE" --notes-file release-notes.txt --prerelease="$PRERELEASE"
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* --draft --verify-tag --target "$SOURCE_SHA" --title "$RELEASE_TITLE" --notes-file release-notes.txt "${flags[@]}"
+          fi
           gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRERELEASE"

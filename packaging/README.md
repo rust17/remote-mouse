@@ -58,7 +58,9 @@ uv run --frozen --project server python packaging/smoke.py --products packaging/
 2. 打开 GitHub Actions，手动运行 **Release**，填写 tag、标题和说明。默认标记为预发布，正式发布时取消勾选。
 3. 等待各平台构建和检查完成，流程会自动上传并发布。仅推送 tag 不会发布。
 
-所有安装包都来自同一次指定的代码提交，发布时会附带文件清单和 SHA-256 校验文件。构建或检查失败就停止；上传失败会留下草稿，重试前需处理该草稿。已有版本不会自动覆盖。
+所有安装包都来自同一次指定的代码提交，发布时会附带文件清单和 SHA-256 校验文件。构建或检查失败就停止；上传失败会留下草稿，重试前需处理该草稿。已有版本默认不会覆盖。
+
+明确需要同版本重新发布时，先将版本 tag 更新到新提交，再运行 **Release** 并勾选 **Replace an existing release**。所有构建和检查完成后，流程会备份并校验旧产物，保存为保留 30 天的 Actions artifact，再更新安装包与说明。替换期间发布页会短暂转为草稿，全部上传成功后重新公开。
 
 macOS 目前只有临时签名，尚未使用 Apple 开发者证书签名或完成公证；Windows 也未做正式代码签名。首次使用的打开方式见[安装说明](../docs/README_ZH.md)。日志保存在 `~/.remote-mouse/logs`，卸载时会保留。
 
@@ -67,5 +69,5 @@ macOS 目前只有临时签名，尚未使用 Apple 开发者证书签名或完�
 - Install **Node.js 22, uv and Python 3.13**. Windows also needs Inno Setup 6.4+ (6.x) and x64 Python; Linux builds target Ubuntu 22.04 x64/X11 with the dependencies listed above.
 - Run the build command above from the repository root. It builds for the current OS and CPU, replacing that target's previous output. Packages are in `packaging/out/<platform>-<architecture>/products/`.
 - Add `--version 1.2.3` to set a version without publishing. Run the test and smoke-check commands above; use the matching products directory. Linux headless checks need `PYSTRAY_BACKEND=xorg xvfb-run -a`. **Windows installer checks must run in a disposable VM or CI**, as they install and uninstall the app.
-- Push your code and a version tag, then manually run **Release** in GitHub Actions. Prerelease is enabled by default. All platforms build the same commit; failed checks stop publication. Failed uploads leave a draft to handle before retrying. Existing releases are not overwritten.
+- Push your code and a version tag, then manually run **Release** in GitHub Actions. Prerelease is enabled by default. All platforms build the same commit; failed checks stop publication. Failed uploads leave a draft to handle before retrying. Existing releases are protected by default. To explicitly republish the same version, update its tag and enable **Replace an existing release**. Previous assets and release metadata are backed up as an Actions artifact for 30 days before replacement; the release stays a draft during asset uploads.
 - Builds are not formally signed or notarized. See [installation instructions](../README.md). Test permissions, real input and long-running use manually before release.
