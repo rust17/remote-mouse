@@ -10,7 +10,7 @@ from server.services import mouse
 
 
 @pytest.fixture
-def mouse_input(monkeypatch):
+def mouse_input(monkeypatch, windows_mouse_api):
     monkeypatch.setattr(protocol, "_left_button_held", False)
     mouse = Mock()
     for name in ("moveRel", "dragRel", "mouseDown", "mouseUp"):
