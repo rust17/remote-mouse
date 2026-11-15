@@ -1,9 +1,13 @@
+import ctypes
 import struct
 import sys
+from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 import pytest
+
 from server.core import protocol
+from server.services import mouse
 
 
 @pytest.fixture
@@ -15,8 +19,24 @@ def mouse_input(monkeypatch):
     return mouse
 
 
+@pytest.fixture
+def windows_mouse_api(monkeypatch):
+    def cursor_info(pointer):
+        cursor = ctypes.cast(pointer, ctypes.POINTER(mouse._CursorInfo)).contents
+        assert cursor.size == (24 if ctypes.sizeof(ctypes.c_void_p) == 8 else 20)
+        cursor.flags = api.cursor_flags
+        return 1
+
+    api = SimpleNamespace(cursor_flags=1, GetCursorInfo=Mock(side_effect=cursor_info))
+    api.SendInput = Mock(return_value=1)
+    monkeypatch.setattr(ctypes, "windll", SimpleNamespace(user32=api), raising=False)
+    return api
+
+
 @pytest.mark.parametrize("platform", ["darwin", "win32", "linux"])
-def test_drag_moves_keep_button_held_until_release(mouse_input, monkeypatch, platform):
+def test_drag_moves_keep_button_held_until_release(
+    mouse_input, monkeypatch, platform, windows_mouse_api
+):
     monkeypatch.setattr(protocol.sys, "platform", platform)
     move = struct.pack(">Bhh", protocol.OP_MOVE, 10, -5)
     assert protocol.process_binary_command(move) is True
@@ -33,6 +53,40 @@ def test_drag_moves_keep_button_held_until_release(mouse_input, monkeypatch, pla
         call.mouseUp(button="left"),
         call.moveRel(10, -5),
     ]
+    windows_mouse_api.SendInput.assert_not_called()
+
+
+@pytest.mark.parametrize("flags", [0, 2])
+def test_windows_hidden_cursor_receives_native_move_packet(
+    mouse_input, monkeypatch, windows_mouse_api, flags
+):
+    def send_input(count, pointer, size):
+        event = ctypes.cast(pointer, ctypes.POINTER(mouse._Input)).contents
+        assert count == 1
+        assert size == (40 if ctypes.sizeof(ctypes.c_void_p) == 8 else 28)
+        assert event.type == 0
+        assert (event.mouse.dx, event.mouse.dy, event.mouse.flags) == (10, -5, 1)
+        return 1
+
+    monkeypatch.setattr(protocol.sys, "platform", "win32")
+    windows_mouse_api.cursor_flags = flags
+    windows_mouse_api.SendInput.side_effect = send_input
+
+    assert protocol.process_binary_command(struct.pack(">Bhh", protocol.OP_MOVE, 10, -5)) is True
+    windows_mouse_api.SendInput.assert_called_once()
+    mouse_input.moveRel.assert_not_called()
+
+
+def test_windows_native_move_failure_falls_back_to_position_update(
+    mouse_input, monkeypatch, windows_mouse_api
+):
+    monkeypatch.setattr(protocol.sys, "platform", "win32")
+    windows_mouse_api.cursor_flags = 0
+    windows_mouse_api.SendInput.return_value = 0
+
+    assert protocol.process_binary_command(struct.pack(">Bhh", protocol.OP_MOVE, 10, -5)) is True
+    windows_mouse_api.SendInput.assert_called_once()
+    mouse_input.moveRel.assert_called_once_with(10, -5)
 
 
 def test_failed_release_keeps_dragging_until_cleanup_succeeds(mouse_input):

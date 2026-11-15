@@ -9,6 +9,8 @@ import pyautogui
 import pyperclip
 from loguru import logger
 
+from server.services.mouse import move_relative
+
 # 禁用 PyAutoGUI 的故障保险
 pyautogui.FAILSAFE = False
 # 移除每个指令后的默认暂停
@@ -97,11 +99,7 @@ def process_binary_command(data: bytes):
             if len(data) < 5:
                 return False
             dx, dy = struct.unpack(">hh", data[1:5])
-            if _left_button_held:
-                # macOS requires dragged events; keep the button down between packets.
-                pyautogui.dragRel(dx, dy, button="left", mouseDownUp=False)
-            else:
-                pyautogui.moveRel(dx, dy)
+            move_relative(dx, dy, dragging=_left_button_held)
 
         elif opcode == OP_CLICK:
             # [OpCode] [Button] [ModifierMask]

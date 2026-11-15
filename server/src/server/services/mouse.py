@@ -1,9 +1,61 @@
-"""Platform-specific mouse gestures used by media controls."""
+"""Platform-specific mouse input."""
 
+import ctypes
 import sys
 import time
 
 import pyautogui
+
+_CURSOR_SHOWING = 0x00000001
+_INPUT_MOUSE = 0
+_MOUSEEVENTF_MOVE = 0x0001
+
+
+class _CursorInfo(ctypes.Structure):
+    _fields_ = [
+        ("size", ctypes.c_uint32),
+        ("flags", ctypes.c_uint32),
+        ("cursor", ctypes.c_void_p),
+        ("x", ctypes.c_int32),
+        ("y", ctypes.c_int32),
+    ]
+
+
+class _MouseInput(ctypes.Structure):
+    _fields_ = [
+        ("dx", ctypes.c_int32),
+        ("dy", ctypes.c_int32),
+        ("mouse_data", ctypes.c_uint32),
+        ("flags", ctypes.c_uint32),
+        ("time", ctypes.c_uint32),
+        ("extra_info", ctypes.c_size_t),
+    ]
+
+
+class _Input(ctypes.Structure):
+    # MOUSEINPUT determines the native INPUT union's size and alignment.
+    _fields_ = [("type", ctypes.c_uint32), ("mouse", _MouseInput)]
+
+
+def _move_hidden_windows_cursor(dx: int, dy: int) -> bool:
+    user32 = ctypes.windll.user32
+    cursor = _CursorInfo(size=ctypes.sizeof(_CursorInfo))
+    if not user32.GetCursorInfo(ctypes.byref(cursor)) or cursor.flags & _CURSOR_SHOWING:
+        return False
+
+    # PyAutoGUI uses SetCursorPos on Windows. A mouse input event can reveal a hidden cursor.
+    event = _Input(type=_INPUT_MOUSE, mouse=_MouseInput(dx=dx, dy=dy, flags=_MOUSEEVENTF_MOVE))
+    return user32.SendInput(1, ctypes.byref(event), ctypes.sizeof(event)) == 1
+
+
+def move_relative(dx: int, dy: int, *, dragging: bool) -> None:
+    if sys.platform == "win32" and (dx or dy) and _move_hidden_windows_cursor(dx, dy):
+        return
+    if dragging:
+        # macOS requires dragged events while the button is held between packets.
+        pyautogui.dragRel(dx, dy, button="left", mouseDownUp=False)
+    else:
+        pyautogui.moveRel(dx, dy)
 
 
 def double_click():
