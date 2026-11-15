@@ -8,7 +8,6 @@ from enum import IntEnum
 import pyautogui
 import pyperclip
 from loguru import logger
-
 from server.services.mouse import move_relative
 
 # 禁用 PyAutoGUI 的故障保险
