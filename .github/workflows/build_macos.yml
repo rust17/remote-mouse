@@ -28,7 +28,7 @@ jobs:
     with:
       platform: macos
       arch: arm64
-      runner: macos-14
+      runner: macos-15
       source_sha: ${{ inputs.source_sha || github.sha }}
       version: ${{ inputs.version || '' }}
   build-x86_64:
