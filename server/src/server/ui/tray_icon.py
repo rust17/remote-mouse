@@ -1,11 +1,11 @@
+import sys
 import threading
 import time
-from typing import Callable, Optional, Tuple
+from collections.abc import Callable
 
 import pystray
 from loguru import logger
 from PIL import Image, ImageDraw, ImageFont
-
 from server.config import APP_NAME, get_asset_path
 from server.core.metrics import metrics
 
@@ -37,11 +37,11 @@ class TrayIcon:
         self.restart_callback = restart_callback
         self.on_log_toggle_callback = on_log_toggle_callback
 
-        self.icon: Optional[pystray.Icon] = None
+        self.icon: pystray.Icon | None = None
         self.logging_enabled = initial_logging_state
         self.show_rate = False
 
-        self._monitor_thread: Optional[threading.Thread] = None
+        self._monitor_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._base_image = create_image()
 
@@ -122,9 +122,9 @@ class TrayIcon:
     def _draw_text_with_halo(
         self,
         draw: ImageDraw.ImageDraw,
-        pos: Tuple[int, int],
+        pos: tuple[int, int],
         text: str,
-        color: Tuple[int, int, int, int],
+        color: tuple[int, int, int, int],
         font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
     ) -> None:
         """Draw text with a black halo/outline for better contrast."""
@@ -172,8 +172,42 @@ class TrayIcon:
             return f"{bps / 1024:.0f}K"
         return f"{bps / 1024 / 1024:.1f}M"
 
+    def _uac_label(self, item):
+        from server.windows.input import status
+
+        return "UAC Mouse: Enabled" if status() == "enabled" else "UAC Mouse: Unavailable"
+
+    def _change_uac(self, enable):
+        def change_support():
+            from server.windows.manage import change
+
+            try:
+                change(enable)
+            except (OSError, RuntimeError) as error:
+                logger.warning("UAC mouse setup failed: {}", error)
+                if self.icon:
+                    self.icon.notify(
+                        "UAC mouse setup did not finish. Use Enable / Repair to retry."
+                    )
+            finally:
+                if self.icon:
+                    self.icon.update_menu()
+
+        threading.Thread(target=change_support, daemon=True).start()
+
     def run(self) -> None:
         """Initialize and run the system tray icon."""
+        uac_items = []
+        if sys.platform == "win32":
+            uac_items = [
+                pystray.MenuItem(
+                    self._uac_label,
+                    pystray.Menu(
+                        pystray.MenuItem("Enable / Repair", lambda: self._change_uac(True)),
+                        pystray.MenuItem("Disable", lambda: self._change_uac(False)),
+                    ),
+                ),
+            ]
         menu = pystray.Menu(
             pystray.MenuItem(
                 f"Address: http://{self.ip_address}:{self.port}",
@@ -184,6 +218,7 @@ class TrayIcon:
                 lambda _: "Disable Logs" if self.logging_enabled else "Enable Logs",
                 self._on_toggle_logging,
             ),
+            *uac_items,
             pystray.MenuItem("Restart", self._on_restart),
             pystray.MenuItem("Exit", self._on_quit),
         )

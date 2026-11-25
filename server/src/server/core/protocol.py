@@ -9,6 +9,7 @@ import pyautogui
 import pyperclip
 from loguru import logger
 from server.services.mouse import move_relative
+from server.windows import input as windows_input
 
 # 禁用 PyAutoGUI 的故障保险
 pyautogui.FAILSAFE = False
@@ -98,6 +99,11 @@ def process_binary_command(data: bytes):
             if len(data) < 5:
                 return False
             dx, dy = struct.unpack(">hh", data[1:5])
+            routed = windows_input.route(windows_input.MOVE, x=dx, y=dy)
+            if routed is not None:
+                if not routed:
+                    logger.debug("UAC mouse move failed: {}", windows_input.client.last_error)
+                return routed
             move_relative(dx, dy, dragging=_left_button_held)
 
         elif opcode == OP_CLICK:
@@ -112,6 +118,9 @@ def process_binary_command(data: bytes):
             if len(data) >= 3:
                 mask = data[2]
 
+            routed = windows_input.route(windows_input.CLICK, button=button_code, modifiers=mask)
+            if routed is not None:
+                return routed
             modifiers = get_modifiers_list(mask)
 
             with ExitStack() as stack:
@@ -126,6 +135,9 @@ def process_binary_command(data: bytes):
             # pyautogui.scroll(clicks, x, y) - vertical
             # hscroll for horizontal if available
             sx, sy = struct.unpack(">hh", data[1:5])
+            routed = windows_input.route(windows_input.SCROLL, x=sx, y=sy)
+            if routed is not None:
+                return routed
             if sy != 0:
                 pyautogui.scroll(sy)
             if sx != 0:
@@ -135,6 +147,11 @@ def process_binary_command(data: bytes):
             if len(data) < 2:
                 return False
             state = data[1]
+            routed = windows_input.route(windows_input.DRAG, button=state)
+            if routed is not None:
+                if routed:
+                    _left_button_held = state == 1
+                return routed
             if state == 0x01:
                 # Retain state if mouseDown fails after partially executing.
                 _left_button_held = True

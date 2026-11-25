@@ -64,6 +64,7 @@ def test_macos_post_failure_still_releases_mouse(quartz):
 @pytest.mark.parametrize("platform", ["win32", "linux"])
 def test_other_platforms_keep_pyautogui_double_click(monkeypatch, platform):
     click = Mock()
+    monkeypatch.setattr(mouse.windows_input, "route", lambda *args, **kwargs: None)
     monkeypatch.setattr(mouse.sys, "platform", platform)
     monkeypatch.setattr(mouse.pyautogui, "doubleClick", click)
     mouse.double_click()

@@ -32,6 +32,8 @@ Linux 所需依赖可这样安装；没有桌面环境时，在构建命令前�
 sudo apt-get install xvfb xauth libx11-6 libxtst6 xclip pulseaudio-utils
 ```
 
+Windows 安装时会请求管理员确认，以启用 UAC 弹窗中的鼠标控制。取消后可继续普通安装，并通过托盘的 UAC Mouse → Enable / Repair 补装。免安装版本也可通过此入口启用。禁用和卸载该功能需要管理员确认。
+
 系统音量依赖：macOS 使用系统 `osascript`（先通过 Core Audio 检查默认输出设备）；Windows 的 `pycaw` / `comtypes` 仅在 Windows 安装，并由冻结配置收集；Linux 需安装 `pactl`（`pulseaudio-utils`），运行 PulseAudio 或 PipeWire 的 `pipewire-pulse` 兼容服务。音频依赖、权限或输出设备不可用时只禁用受影响的媒体控制。
 
 ## 检查打包结果

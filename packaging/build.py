@@ -115,6 +115,23 @@ def main():
         env=env,
     )
     app_dir = output / "dist/RemoteMouse"
+    if host == "windows":
+        run(
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--clean",
+            "--noconfirm",
+            "--distpath",
+            output / "helper",
+            "--workpath",
+            output / "helper-work",
+            ROOT / "packaging/WindowsInput.spec",
+            env=env,
+        )
+        shutil.copy2(
+            output / "helper/RemoteMouseInput.exe", app_dir / "RemoteMouseInput.exe"
+        )
     if host == "macos":
         app = output / "dist/RemoteMouse.app"
         run("codesign", "--verify", "--deep", "--strict", app)

@@ -25,6 +25,22 @@ class FakeAudio:
         self.state = AudioState(self.state.volume, muted)
 
 
+def test_disconnect_releases_uac_channel_without_interrupting_another_drag(monkeypatch):
+    disconnect = Mock()
+    monkeypatch.setattr("server.services.media.disconnect_windows_input", disconnect)
+    owner, another = object(), object()
+    processor = Mock(return_value=True)
+    worker = InputWorker(processor=processor, probe=lambda: None)
+    worker.drag_owner = owner
+    worker.disconnect(another)
+    disconnect.assert_not_called()
+    processor.assert_not_called()
+    worker.disconnect(owner)
+    processor.assert_called_once_with(bytes((4, 0)))
+    disconnect.assert_called_once_with()
+    assert worker.drag_owner is None
+
+
 @pytest.mark.parametrize(
     "action,key",
     [

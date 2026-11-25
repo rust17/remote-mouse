@@ -1,4 +1,5 @@
 import pytest
+import sys
 from unittest.mock import MagicMock
 from server.ui.tray_icon import TrayIcon
 
@@ -106,7 +107,7 @@ def test_run_constructs_ui_correctly(mock_tray_deps):
 
     # 2. Verify Menu Construction
     # We expect 4 MenuItems: Address Info, Log Toggle, Restart, Exit
-    assert mock_deps["pystray"].MenuItem.call_count == 4
+    assert mock_deps["pystray"].MenuItem.call_count == (7 if sys.platform == "win32" else 4)
 
     # Inspect the calls
     calls = mock_deps["pystray"].MenuItem.call_args_list

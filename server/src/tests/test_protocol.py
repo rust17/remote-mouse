@@ -20,6 +20,7 @@ def mouse_input(monkeypatch, windows_mouse_api):
 
 @pytest.fixture
 def windows_mouse_api(monkeypatch):
+    monkeypatch.setattr(protocol.windows_input, "route", lambda *args, **kwargs: None)
     def cursor_info(pointer):
         cursor = ctypes.cast(pointer, ctypes.POINTER(mouse._CursorInfo)).contents
         assert cursor.size == (24 if ctypes.sizeof(ctypes.c_void_p) == 8 else 20)

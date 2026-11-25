@@ -37,3 +37,33 @@ Name: "{autodesktop}\Remote Mouse"; Filename: "{app}\RemoteMouse.exe"; Tasks: de
 
 [Run]
 Filename: "{app}\RemoteMouse.exe"; Description: "Launch Remote Mouse"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then begin
+    if not Exec(ExpandConstant('{app}\RemoteMouse.exe'), '--enable-uac', '',
+                SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+      ResultCode := -1;
+    if ResultCode <> 0 then begin
+      Log('UAC mouse support was not enabled. It can be repaired from the tray.');
+      if not WizardSilent then
+        MsgBox('UAC mouse control was not enabled. Use Enable / Repair in the tray menu to finish setup.',
+               mbInformation, MB_OK);
+    end;
+  end;
+end;
+
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec(ExpandConstant('{app}\RemoteMouse.exe'), '--disable-uac', '',
+                 SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Result then Result := ResultCode = 0;
+  if not Result then
+    MsgBox('UAC mouse support could not be removed. Please retry and approve the administrator prompt.',
+           mbError, MB_OK);
+end;

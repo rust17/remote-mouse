@@ -98,6 +98,8 @@ def check_directory(app: Path, cwd: Path, windows=False):
     web = app / "_internal/web_dist"
     if not (app / "_internal/assets/tray_icon.png").is_file():
         raise ValueError("Missing bundled tray icon")
+    if windows and not (app / "RemoteMouseInput.exe").is_file():
+        raise ValueError("Missing Windows UAC input helper")
     check_server(executable, web, cwd)
 
 
@@ -159,7 +161,7 @@ def check_windows(products: Path, names: list[str], cwd: Path):
     installed = cwd / "installed"
     installer = products / names[0]
     uninstaller = installed / "unins000.exe"
-    # The install is current-user and deliberately requires no elevation.
+    # The app remains current-user. Default UAC input setup requests elevation.
     user_data = Path.home() / ".remote-mouse"
     user_data.mkdir(exist_ok=True)
     sentinel = user_data / "installer-smoke-sentinel.txt"

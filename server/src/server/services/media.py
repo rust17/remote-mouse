@@ -20,6 +20,7 @@ from server.core.protocol import (
 )
 from server.services.audio import AudioState, NoAudioDevice, create_audio_backend
 from server.services.mouse import double_click
+from server.windows.input import disconnect as disconnect_windows_input
 
 INPUT_ACTIONS = {
     MediaAction.REWIND,
@@ -95,6 +96,12 @@ class InputWorker:
             return False
         self.drag_owner = None
         return True
+
+    def disconnect(self, owner):
+        self.release(owner)
+        # A different phone can still own an active drag on this shared worker.
+        if self.drag_owner is None:
+            disconnect_windows_input()
 
     def media(self, action: MediaAction):
         error = self.capabilities().get(action)
@@ -259,10 +266,11 @@ class MediaService:
         return result, snapshot
 
     async def release(self, owner):
-        await self.input_call(self.input.release, owner)
+        await self.input_call(self.input.disconnect, owner)
 
     async def close(self):
         await self.input_call(lambda: self.input.release(self.input.drag_owner))
+        await self.input_call(disconnect_windows_input)
         # Shutdown off the event loop, including audio operations still finishing after disconnect.
         await asyncio.to_thread(self.input_executor.shutdown, wait=True)
         await asyncio.to_thread(self.audio_executor.shutdown, wait=True)

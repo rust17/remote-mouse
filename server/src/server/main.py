@@ -14,11 +14,23 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Remote Mouse Server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to listen on")
     parser.add_argument("--log", action="store_true", help="Enable file logging")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--enable-uac", action="store_true")
+    group.add_argument("--disable-uac", action="store_true")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+
+    if getattr(args, "enable_uac", False) or getattr(args, "disable_uac", False):
+        from server.windows.manage import change
+
+        try:
+            change(args.enable_uac)
+        except (OSError, RuntimeError):
+            sys.exit(1)
+        return
 
     # Initial logging configuration
     configure_logging(args.log)

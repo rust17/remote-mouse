@@ -5,6 +5,7 @@ import sys
 import time
 
 import pyautogui
+from server.windows import input as windows_input
 
 _CURSOR_SHOWING = 0x00000001
 _INPUT_MOUSE = 0
@@ -60,6 +61,11 @@ def move_relative(dx: int, dy: int, *, dragging: bool) -> None:
 
 def double_click():
     """Send a left double-click at the current desktop cursor position."""
+    routed = windows_input.route(windows_input.DOUBLE_CLICK)
+    if routed is not None:
+        if not routed:
+            raise OSError("UAC mouse input unavailable")
+        return
     if sys.platform != "darwin":
         pyautogui.doubleClick(button="left", interval=0.12)
         return
