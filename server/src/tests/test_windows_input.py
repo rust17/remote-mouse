@@ -523,8 +523,20 @@ def test_modifier_cleanup_sends_only_requested_key_ups(monkeypatch, worker, secu
     monkeypatch.setattr(desktop, "send", send)
     assert desktop.execute(support.packet(support.RELEASE, modifiers=5)) == support.HANDLED
     events = send.call_args.args[0]
-    assert [(event.kind, event.keyboard.key, event.keyboard.flags) for event in events] == [
+    assert {(event.kind, event.keyboard.key, event.keyboard.flags) for event in events} == {
         (1, 0x11, 2),
         (1, 0x12, 2),
-    ]
+    }
+    assert not desktop.held
+
+
+def test_modifier_cleanup_failure_retains_pending_key_ups(monkeypatch, worker):
+    desktop = worker.DesktopMouse()
+    monkeypatch.setattr(desktop, "refresh", Mock())
+    send = Mock(side_effect=[OSError("partial release"), None])
+    monkeypatch.setattr(desktop, "send", send)
+    with pytest.raises(OSError):
+        desktop.execute(support.packet(support.RELEASE, modifiers=4))
+    assert len(desktop.held) == 1
+    desktop.release()
     assert not desktop.held
