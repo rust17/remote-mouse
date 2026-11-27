@@ -95,6 +95,8 @@ def process_binary_command(data: bytes):
         return decode_media_command(data)
 
     try:
+        if windows_input.resume_ordinary():
+            _left_button_held = False
         if opcode == OP_MOVE:
             if len(data) < 5:
                 return False

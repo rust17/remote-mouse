@@ -116,11 +116,39 @@ class Client:
 
 client = Client()
 _ordinary_drag = False
+_secure_input_active = False
+
+
+def resume_ordinary():
+    """Finish the secure input session before the next ordinary mouse or key event."""
+    global _ordinary_drag, _secure_input_active
+
+    if sys.platform != "win32" or not _secure_input_active:
+        return False
+    from server.windows import native as n
+
+    desktop = n.OpenInputDesktop(0, False, 1)
+    if not desktop:
+        return False
+    name = n.c.create_unicode_buffer(64)
+    try:
+        n.check(n.GetUserObjectInformation(desktop, 2, name, n.c.sizeof(name), None))
+        if name.value.casefold() != "default":
+            return False
+    finally:
+        n.CloseDesktop(desktop)
+    # RELEASE makes the worker refresh its desktop synchronously. Closing the
+    # connection also requests cleanup if the helper could not acknowledge it.
+    # This cleanup is independent of the next command, which is never replayed.
+    disconnect()
+    _secure_input_active = False
+    _ordinary_drag = False
+    return True
 
 
 def route(action, **kwargs):
     """None selects the ordinary backend. False must never replay a failed click."""
-    global _ordinary_drag
+    global _ordinary_drag, _secure_input_active
 
     if sys.platform != "win32":
         return None
@@ -132,6 +160,7 @@ def route(action, **kwargs):
         try:
             n.check(n.GetUserObjectInformation(desktop, 2, name, n.c.sizeof(name), None))
             if name.value.casefold() == "default":
+                resume_ordinary()
                 if action == DRAG:
                     _ordinary_drag = kwargs.get("button") == 1
                 return None
@@ -141,6 +170,7 @@ def route(action, **kwargs):
         if client.request(packet(RELEASE)) != HANDLED:
             return False
         _ordinary_drag = False
+    _secure_input_active = True
     result = client.request(packet(action, **kwargs))
     # A desktop change between probing and dispatch must drop this command.
     return result == HANDLED

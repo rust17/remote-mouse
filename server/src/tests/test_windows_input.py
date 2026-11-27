@@ -378,3 +378,37 @@ def test_ordinary_client_authenticates_protected_helper_without_debug_privilege(
     assert connection.request(support.packet(support.PING)) == support.HANDLED
     fake_native.process_sid.assert_called_once_with()
     assert connection.last_error is None
+
+
+@pytest.mark.parametrize("acknowledgement", [support.HANDLED, support.FAILED])
+def test_return_to_default_releases_helper_before_ordinary_input(
+    monkeypatch, fake_native, acknowledgement
+):
+    monkeypatch.setattr(support.sys, "platform", "win32")
+    monkeypatch.setattr(support, "_secure_input_active", True)
+    monkeypatch.setattr(support, "_ordinary_drag", True)
+    monkeypatch.setattr(support.client, "pipe", 42)
+    calls = []
+    monkeypatch.setattr(
+        support.client, "request", lambda data: calls.append(("release", data)) or acknowledgement
+    )
+    monkeypatch.setattr(support.client, "close", lambda: calls.append(("close",)))
+    monkeypatch.setattr(protocol, "_left_button_held", True)
+    monkeypatch.setattr(protocol.pyautogui, "press", lambda key: calls.append(("key", key)))
+    assert protocol.process_binary_command(bytes([protocol.OP_KEY_ACTION, 0]) + b"enter")
+    assert calls == [("release", support.packet(support.RELEASE)), ("close",), ("key", "enter")]
+    assert not protocol._left_button_held
+    assert not support._secure_input_active
+    assert not support._ordinary_drag
+    assert not support.resume_ordinary()
+
+
+def test_secure_desktop_does_not_resume_ordinary_input(monkeypatch, fake_native):
+    monkeypatch.setattr(support.sys, "platform", "win32")
+    monkeypatch.setattr(support, "_secure_input_active", True)
+    fake_native.OpenInputDesktop.return_value = None
+    release = Mock()
+    monkeypatch.setattr(support, "disconnect", release)
+    assert not support.resume_ordinary()
+    assert support._secure_input_active
+    release.assert_not_called()
