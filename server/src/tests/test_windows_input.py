@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-
 from server.core import protocol
 from server.windows import input as support
 

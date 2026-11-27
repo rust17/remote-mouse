@@ -8,7 +8,6 @@ from enum import IntEnum
 import pyautogui
 import pyperclip
 from loguru import logger
-
 from server.services.mouse import move_relative
 from server.windows import input as windows_input
 
