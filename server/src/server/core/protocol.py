@@ -206,7 +206,11 @@ def process_binary_command(data: bytes):
 
             mask = data[1]
             key_name = data[2:].decode("utf-8")
-            routed = windows_input.route(windows_input.KEY, text=key_name.lower(), modifiers=mask)
+            routed = windows_input.route(
+                windows_input.KEY,
+                text=key_name if len(key_name) == 1 else key_name.lower(),
+                modifiers=mask,
+            )
             if routed is not None:
                 return routed
 

@@ -162,6 +162,7 @@ def test_select_all_uses_controlled_computer_platform(platform, modifier):
 
 def test_regular_key_keeps_existing_modifier_behavior():
     with (
+        patch.object(protocol.windows_input, "route", return_value=None),
         patch.object(protocol.pyautogui, "hold") as hold,
         patch.object(protocol.pyautogui, "press") as press,
         patch.object(protocol.pyautogui, "hotkey") as hotkey,
