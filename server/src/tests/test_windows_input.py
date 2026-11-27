@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+
 from server.core import protocol
 from server.windows import input as support
 
@@ -484,3 +485,46 @@ def test_elevated_keyboard_failure_releases_modifiers(monkeypatch, worker, fake_
         desktop.execute(support.packet(support.KEY, text="enter", modifiers=1))
     assert not desktop.held
     assert [event.keyboard.key for event in send.call_args.args[0]] == [13, 17]
+
+
+def test_ordinary_shortcut_releases_modifier_after_privileged_focus_change(
+    monkeypatch, fake_native
+):
+    monkeypatch.setattr(support.sys, "platform", "win32")
+    monkeypatch.setattr(support, "route", Mock(return_value=None))
+    request = Mock(return_value=support.HANDLED)
+    monkeypatch.setattr(support.client, "request", request)
+    monkeypatch.setattr(protocol.pyautogui, "hold", lambda key: nullcontext())
+    monkeypatch.setattr(
+        protocol.pyautogui,
+        "press",
+        lambda key: setattr(fake_native.foreground_elevated, "return_value", True),
+    )
+    assert protocol.process_binary_command(bytes([protocol.OP_KEY_ACTION, 4]) + b"esc")
+    request.assert_called_once_with(support.packet(support.RELEASE, modifiers=4))
+    assert support._secure_input_active
+
+
+def test_ordinary_modifier_cleanup_keeps_original_backend(monkeypatch, fake_native):
+    monkeypatch.setattr(support.sys, "platform", "win32")
+    request = Mock()
+    monkeypatch.setattr(support.client, "request", request)
+    with support.ordinary_modifiers(1):
+        pass
+    request.assert_not_called()
+
+
+@pytest.mark.parametrize("secure", [False, True])
+def test_modifier_cleanup_sends_only_requested_key_ups(monkeypatch, worker, secure):
+    desktop = worker.DesktopMouse()
+    desktop.name = "Winlogon" if secure else "Default"
+    monkeypatch.setattr(desktop, "refresh", Mock())
+    send = Mock()
+    monkeypatch.setattr(desktop, "send", send)
+    assert desktop.execute(support.packet(support.RELEASE, modifiers=5)) == support.HANDLED
+    events = send.call_args.args[0]
+    assert [(event.kind, event.keyboard.key, event.keyboard.flags) for event in events] == [
+        (1, 0x11, 2),
+        (1, 0x12, 2),
+    ]
+    assert not desktop.held

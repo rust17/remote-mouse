@@ -6,9 +6,10 @@ import struct
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
-VERSION = 2
+VERSION = 3
 NORMAL, HANDLED, FAILED = 0, 1, 2
 MOVE, CLICK, SCROLL, DRAG, DOUBLE_CLICK, RELEASE, PING = range(1, 8)
 TEXT, KEY = 8, 9
@@ -84,7 +85,7 @@ def decode(data):
         raise ValueError("Invalid drag state")
     if action not in (MOVE, SCROLL) and (x or y):
         raise ValueError("Unexpected mouse coordinates")
-    if action != CLICK and modifiers:
+    if action not in (CLICK, RELEASE) and modifiers:
         raise ValueError("Unexpected modifiers")
     return action, x, y, button, modifiers
 
@@ -161,6 +162,33 @@ class Client:
 client = Client()
 _ordinary_drag = False
 _secure_input_active = False
+
+
+@contextmanager
+def ordinary_modifiers(mask):
+    """Release our modifiers even if a shortcut activates a privileged window."""
+    global _secure_input_active
+
+    try:
+        yield
+    finally:
+        if sys.platform == "win32" and mask:
+            from server.windows import native as n
+
+            desktop = n.OpenInputDesktop(0, False, 1)
+            protected = not desktop
+            if desktop:
+                name = n.c.create_unicode_buffer(64)
+                try:
+                    n.check(n.GetUserObjectInformation(desktop, 2, name, n.c.sizeof(name), None))
+                    protected = name.value.casefold() != "default" or n.foreground_elevated()
+                finally:
+                    n.CloseDesktop(desktop)
+            if protected:
+                # UIPI can reject the ordinary key-up after Alt+Tab/Alt+Esc
+                # changes focus. Release only modifiers pressed by this command.
+                _secure_input_active = True
+                client.request(packet(RELEASE, modifiers=mask))
 
 
 def resume_ordinary():

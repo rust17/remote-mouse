@@ -242,8 +242,18 @@ class DesktopMouse:
             return HANDLED
         if action == RELEASE:
             self.release()
-            # Also cancel a drag that began in the ordinary user process.
-            self.send([mouse(4)])
+            if modifiers:
+                self.held.extend(
+                    [
+                        key(code, True)
+                        for bit, code in enumerate((0x11, 0x10, 0x12, 0x5B))
+                        if modifiers & (1 << bit)
+                    ]
+                )
+                self.release()
+            else:
+                # Also cancel a drag that began in the ordinary user process.
+                self.send([mouse(4)])
             return HANDLED
         if self.name.casefold() == "default":
             if not n.foreground_elevated():

@@ -8,6 +8,7 @@ from enum import IntEnum
 import pyautogui
 import pyperclip
 from loguru import logger
+
 from server.services.mouse import move_relative
 from server.windows import input as windows_input
 
@@ -125,7 +126,7 @@ def process_binary_command(data: bytes):
                 return routed
             modifiers = get_modifiers_list(mask)
 
-            with ExitStack() as stack:
+            with windows_input.ordinary_modifiers(mask), ExitStack() as stack:
                 for key in modifiers:
                     stack.enter_context(pyautogui.hold(key))
                 pyautogui.click(button=button)
@@ -216,7 +217,8 @@ def process_binary_command(data: bytes):
 
             # Semantic shortcut: the phone's OS does not identify the controlled computer's OS.
             if key_name == "select_all":
-                pyautogui.hotkey("command" if sys.platform == "darwin" else "ctrl", "a")
+                with windows_input.ordinary_modifiers(1):
+                    pyautogui.hotkey("command" if sys.platform == "darwin" else "ctrl", "a")
                 return True
 
             modifiers = get_modifiers_list(mask)
@@ -229,7 +231,7 @@ def process_binary_command(data: bytes):
                 else:
                     key_name = "win"
 
-            with ExitStack() as stack:
+            with windows_input.ordinary_modifiers(mask), ExitStack() as stack:
                 for key in modifiers:
                     stack.enter_context(pyautogui.hold(key))
                 pyautogui.press(key_name)
