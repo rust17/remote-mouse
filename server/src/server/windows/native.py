@@ -146,7 +146,7 @@ def security(sid, access="GRGW"):
 
 
 def pipe_read(pipe):
-    data = c.create_string_buffer(64)
+    data = c.create_string_buffer(4099)
     count = DWORD()
     check(ReadFile(pipe, data, len(data), c.byref(count), None))
     if not count.value:
@@ -159,3 +159,25 @@ def pipe_write(pipe, data):
     check(WriteFile(pipe, data, len(data), c.byref(count), None))
     if count.value != len(data):
         raise OSError("Incomplete input pipe write")
+
+
+def foreground_elevated():
+    """A foreground process that cannot be queried also requires privileged input."""
+    pid = DWORD()
+    GetWindowThreadProcessId(GetForegroundWindow(), c.byref(pid))
+    if not pid.value:
+        return False
+    try:
+        with handle(OpenProcess(0x1000, False, pid.value)) as process:
+            token = HANDLE()
+            check(OpenProcessToken(process, 8, c.byref(token)))
+            with handle(token.value):
+                elevation, size = DWORD(), DWORD()
+                check(
+                    GetTokenInformation(
+                        token, 20, c.byref(elevation), c.sizeof(elevation), c.byref(size)
+                    )
+                )
+                return bool(elevation.value)
+    except OSError:
+        return True

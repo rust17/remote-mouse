@@ -8,9 +8,37 @@ import threading
 import time
 from pathlib import Path
 
-VERSION = 1
+VERSION = 2
 NORMAL, HANDLED, FAILED = 0, 1, 2
 MOVE, CLICK, SCROLL, DRAG, DOUBLE_CLICK, RELEASE, PING = range(1, 8)
+TEXT, KEY = 8, 9
+KEY_CODES = {
+    "enter": 0x0D,
+    "return": 0x0D,
+    "tab": 9,
+    "esc": 0x1B,
+    "escape": 0x1B,
+    "backspace": 8,
+    "delete": 0x2E,
+    "insert": 0x2D,
+    "home": 0x24,
+    "end": 0x23,
+    "pageup": 0x21,
+    "pagedown": 0x22,
+    "left": 0x25,
+    "up": 0x26,
+    "right": 0x27,
+    "down": 0x28,
+    "space": 0x20,
+    "win": 0x5B,
+    "cmd": 0x5B,
+    "meta": 0x5B,
+    "ctrl": 0x11,
+    "shift": 0x10,
+    "alt": 0x12,
+    "capslock": 0x14,
+}
+KEY_CODES.update({f"f{index}": 0x6F + index for index in range(1, 25)})
 PACKET = struct.Struct("<BBhhBB")
 
 
@@ -22,11 +50,27 @@ def pipe_name(sid, session):
     return rf"\\.\pipe\{identity(sid)}-{session}"
 
 
-def packet(action, x=0, y=0, button=0, modifiers=0):
+def packet(action, x=0, y=0, button=0, modifiers=0, text=""):
+    if action in (TEXT, KEY):
+        return bytes((VERSION, action, modifiers)) + text.encode("utf-8")
     return PACKET.pack(VERSION, action, x, y, button, modifiers)
 
 
 def decode(data):
+    if len(data) >= 3 and data[0] == VERSION and data[1] in (TEXT, KEY):
+        action, modifiers = data[1:3]
+        if len(data) > 4099 or modifiers > 15 or (action == TEXT and modifiers):
+            raise ValueError("Invalid keyboard command")
+        text = data[3:].decode("utf-8")
+        if action == KEY and not (
+            text in KEY_CODES
+            or text == "select_all"
+            or len(text) == 1
+            and text.isascii()
+            and text.isprintable()
+        ):
+            raise ValueError("Unsupported key")
+        return action, text, 0, 0, modifiers
     if len(data) != PACKET.size:
         raise ValueError("Invalid mouse command size")
     version, action, x, y, button, modifiers = PACKET.unpack(data)
@@ -133,7 +177,7 @@ def resume_ordinary():
     name = n.c.create_unicode_buffer(64)
     try:
         n.check(n.GetUserObjectInformation(desktop, 2, name, n.c.sizeof(name), None))
-        if name.value.casefold() != "default":
+        if name.value.casefold() != "default" or n.foreground_elevated():
             return False
     finally:
         n.CloseDesktop(desktop)
@@ -159,7 +203,7 @@ def route(action, **kwargs):
         name = n.c.create_unicode_buffer(64)
         try:
             n.check(n.GetUserObjectInformation(desktop, 2, name, n.c.sizeof(name), None))
-            if name.value.casefold() == "default":
+            if name.value.casefold() == "default" and not n.foreground_elevated():
                 resume_ordinary()
                 if action == DRAG:
                     _ordinary_drag = kwargs.get("button") == 1
@@ -171,6 +215,12 @@ def route(action, **kwargs):
             return False
         _ordinary_drag = False
     _secure_input_active = True
+    if action == TEXT:
+        text = kwargs.get("text", "")
+        for offset in range(0, len(text), 1024):
+            if client.request(packet(TEXT, text=text[offset : offset + 1024])) != HANDLED:
+                return False
+        return True
     result = client.request(packet(action, **kwargs))
     # A desktop change between probing and dispatch must drop this command.
     return result == HANDLED

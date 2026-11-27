@@ -1,4 +1,4 @@
-"""Session-local SYSTEM worker. Only consent.exe on Winlogon receives input."""
+"""Session input for UAC mouse control and elevated ordinary desktop windows."""
 
 import ctypes as c
 import hashlib
@@ -16,11 +16,14 @@ from server.windows.input import (
     DRAG,
     FAILED,
     HANDLED,
+    KEY,
+    KEY_CODES,
     MOVE,
     NORMAL,
     PING,
     RELEASE,
     SCROLL,
+    TEXT,
     VERSION,
     decode,
     pipe_name,
@@ -185,6 +188,53 @@ class DesktopMouse:
         with n.handle(n.OpenProcess(0x1000, False, pid)) as process:
             return n.image_path(process) == n.system_directory() / "consent.exe"
 
+    def allowed(self):
+        return n.foreground_elevated() if self.name.casefold() == "default" else self.consent()
+
+    def keyboard(self, action, text, modifiers):
+        if self.held:
+            return FAILED
+        try:
+            if action == TEXT:
+                encoded = text.encode("utf-16-le")
+                for offset in range(0, len(encoded), 128):
+                    self.refresh()
+                    if self.name.casefold() != "default" or not self.allowed():
+                        return FAILED
+                    events = []
+                    chunk = encoded[offset : offset + 128]
+                    for index in range(0, len(chunk), 2):
+                        scan = int.from_bytes(chunk[index : index + 2], "little")
+                        down = Input(kind=1, value=InputUnion(keyboard=KeyboardInput(0, scan, 4)))
+                        up = Input(kind=1, value=InputUnion(keyboard=KeyboardInput(0, scan, 6)))
+                        self.held.append(up)
+                        events.extend((down, up))
+                    self.send(events)
+                    self.held.clear()
+            else:
+                if text == "select_all":
+                    text, modifiers = "a", modifiers | 1
+                code = KEY_CODES.get(text)
+                if code is None:
+                    scan_key = n.bind("user32", "VkKeyScanW", c.c_short, w.WCHAR)
+                    value = scan_key(text)
+                    if value == -1:
+                        return FAILED
+                    code, modifiers = value & 255, modifiers | (value >> 8)
+                for bit, modifier in enumerate((0x11, 0x10, 0x12, 0x5B)):
+                    if modifiers & (1 << bit):
+                        self.held.append(key(modifier, True))
+                        self.send([key(modifier)])
+                self.refresh()
+                if self.name.casefold() != "default" or not self.allowed():
+                    return FAILED
+                self.held.append(key(code, True))
+                self.send([key(code), key(code, True)])
+                self.held.pop()
+        finally:
+            self.release()
+        return HANDLED
+
     def execute(self, data):
         action, x, y, button, modifiers = decode(data)
         self.refresh()
@@ -196,12 +246,17 @@ class DesktopMouse:
             self.send([mouse(4)])
             return HANDLED
         if self.name.casefold() == "default":
-            self.release()
-            return NORMAL
-        if not self.consent():
+            if not n.foreground_elevated():
+                self.release()
+                return NORMAL
+        elif not self.consent():
             logging.warning("Input rejected on desktop %s", self.name)
             self.release()
             return FAILED
+        if action in (TEXT, KEY):
+            if self.name.casefold() != "default":
+                return FAILED
+            return self.keyboard(action, x, modifiers)
         if action == MOVE:
             point = w.POINT()
             get_position = n.bind("user32", "GetCursorPos", w.BOOL, n.PTR)
@@ -242,7 +297,7 @@ class DesktopMouse:
                     if index:
                         time.sleep(0.12)
                     self.refresh()
-                    if not self.consent():
+                    if not self.allowed():
                         return FAILED
                     self.held.append(mouse(up))
                     self.send([mouse(down), mouse(up)])

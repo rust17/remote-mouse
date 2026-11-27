@@ -164,6 +164,9 @@ def process_binary_command(data: bytes):
 
         elif opcode == OP_TEXT:
             text = data[1:].decode("utf-8")
+            routed = windows_input.route(windows_input.TEXT, text=text)
+            if routed is not None:
+                return routed
             # Use clipboard paste to support unicode (Chinese, etc.)
             try:
                 # Save old clipboard content (best effort)
@@ -203,6 +206,9 @@ def process_binary_command(data: bytes):
 
             mask = data[1]
             key_name = data[2:].decode("utf-8")
+            routed = windows_input.route(windows_input.KEY, text=key_name.lower(), modifiers=mask)
+            if routed is not None:
+                return routed
 
             # Semantic shortcut: the phone's OS does not identify the controlled computer's OS.
             if key_name == "select_all":

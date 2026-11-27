@@ -65,11 +65,15 @@ def test_uac_click_is_never_replayed_by_ordinary_backend(monkeypatch, result):
 def fake_native(monkeypatch):
     import server.windows
 
+    monkeypatch.setattr(support, "_secure_input_active", False)
+    monkeypatch.setattr(support, "_ordinary_drag", False)
+
     api = SimpleNamespace(
         c=ctypes,
         PTR=ctypes.c_void_p,
         DWORD=ctypes.c_uint32,
         SYSTEM_SID="S-1-5-18",
+        foreground_elevated=Mock(return_value=False),
         bind=lambda *args: Mock(),
         GetThreadDesktop=Mock(return_value=10),
         GetCurrentThreadId=Mock(return_value=1),
@@ -412,3 +416,71 @@ def test_secure_desktop_does_not_resume_ordinary_input(monkeypatch, fake_native)
     assert not support.resume_ordinary()
     assert support._secure_input_active
     release.assert_not_called()
+
+
+def test_elevated_default_window_keeps_privileged_input(monkeypatch, fake_native):
+    monkeypatch.setattr(support.sys, "platform", "win32")
+    fake_native.foreground_elevated.return_value = True
+    request = Mock(return_value=support.HANDLED)
+    monkeypatch.setattr(support.client, "request", request)
+    assert support.route(support.MOVE, x=10)
+    request.assert_called_once_with(support.packet(support.MOVE, x=10))
+    assert not support.resume_ordinary()
+
+
+@pytest.mark.parametrize(
+    "action,text", [(support.TEXT, "你好🙂"), (support.KEY, "enter"), (support.KEY, "select_all")]
+)
+def test_privileged_keyboard_packet_round_trip(action, text):
+    assert support.decode(support.packet(action, text=text)) == (action, text, 0, 0, 0)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        bytes([support.VERSION, support.KEY, 0]) + b"run arbitrary command",
+        support.packet(support.TEXT, text="x" * 4097),
+        support.packet(support.TEXT, text="x", modifiers=1),
+    ],
+)
+def test_privileged_keyboard_rejects_invalid_packets(data):
+    with pytest.raises(ValueError):
+        support.decode(data)
+
+
+def test_keyboard_is_rejected_on_uac_desktop(monkeypatch, worker):
+    desktop = worker.DesktopMouse()
+    desktop.name = "Winlogon"
+    monkeypatch.setattr(desktop, "refresh", Mock())
+    monkeypatch.setattr(desktop, "consent", lambda: True)
+    send = Mock()
+    monkeypatch.setattr(desktop, "send", send)
+    assert desktop.execute(support.packet(support.TEXT, text="hello")) == support.FAILED
+    send.assert_not_called()
+
+
+def test_elevated_unicode_input_uses_utf16_and_releases_state(monkeypatch, worker, fake_native):
+    desktop = worker.DesktopMouse()
+    desktop.name = "Default"
+    monkeypatch.setattr(desktop, "refresh", Mock())
+    fake_native.foreground_elevated.return_value = True
+    send = Mock()
+    monkeypatch.setattr(desktop, "send", send)
+    assert desktop.execute(support.packet(support.TEXT, text="中🙂")) == support.HANDLED
+    events = send.call_args.args[0]
+    assert [event.keyboard.scan for event in events[::2]] == [0x4E2D, 0xD83D, 0xDE42]
+    assert all(event.keyboard.flags == 6 for event in events[1::2])
+    assert not desktop.held
+
+
+def test_elevated_keyboard_failure_releases_modifiers(monkeypatch, worker, fake_native):
+    desktop = worker.DesktopMouse()
+    desktop.name = "Default"
+    monkeypatch.setattr(desktop, "refresh", Mock())
+    fake_native.foreground_elevated.return_value = True
+    send = Mock(side_effect=[None, OSError("partial send"), None])
+    monkeypatch.setattr(desktop, "send", send)
+    with pytest.raises(OSError):
+        desktop.execute(support.packet(support.KEY, text="enter", modifiers=1))
+    assert not desktop.held
+    assert [event.keyboard.key for event in send.call_args.args[0]] == [13, 17]

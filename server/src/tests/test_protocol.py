@@ -21,6 +21,7 @@ def mouse_input(monkeypatch, windows_mouse_api):
 @pytest.fixture
 def windows_mouse_api(monkeypatch):
     monkeypatch.setattr(protocol.windows_input, "route", lambda *args, **kwargs: None)
+
     def cursor_info(pointer):
         cursor = ctypes.cast(pointer, ctypes.POINTER(mouse._CursorInfo)).contents
         assert cursor.size == (24 if ctypes.sizeof(ctypes.c_void_p) == 8 else 20)
@@ -149,6 +150,7 @@ def test_drag_packets_produce_native_drag_events_without_posting_to_desktop(monk
 def test_select_all_uses_controlled_computer_platform(platform, modifier):
     with (
         patch.object(protocol.sys, "platform", platform),
+        patch.object(protocol.windows_input, "route", return_value=None),
         patch.object(protocol.pyautogui, "hotkey") as hotkey,
         patch.object(protocol.pyautogui, "press") as press,
     ):
