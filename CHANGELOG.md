@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+# [v1.1.5] - 2026-11-28
+
+### Changed
+
+- **Windows**: The installer enables UAC mouse control by default after administrator approval. Use the tray menu to disable, re-enable, or repair UAC control. Portable builds can enable it from the tray.
+
+### Fixed
+
+- **Windows**: Mouse and keyboard control now continue in administrator windows after a UAC prompt closes. Switching back to an ordinary window restores ordinary input on the same connection.
+- **Windows**: Moving the pointer from the phone makes a hidden pointer visible again after startup.
+- **Windows**: Fixed shortcut modifiers remaining pressed when focus moves to an administrator window.
+
+### Security
+
+- With UAC control enabled, any client that can reach the controller can interact with elevation prompts and administrator windows without separate device authorization.
+
 # [v1.1.4] - 2026-10-09
 
 ### Added
